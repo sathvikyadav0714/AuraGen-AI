@@ -14,3 +14,9 @@ already provided.
 
 Return the response in valid JSON format.
 `;
+export const REQUIRED_FORM_CONTEXT = {
+    cognitiveLoadScore: "User's current cognitive load score",
+    problematicField: "Field where the user is experiencing difficulty",
+    frictionDetails: "Description of user interaction difficulties",
+    formData: "Information already entered by the user"
+};
