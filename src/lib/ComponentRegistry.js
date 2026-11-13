@@ -76,17 +76,23 @@ const PhoneInput = ({ label, name, value, onChange, placeholder, error }) => (
 const SelectInput = ({ label, name, value, onChange, options = [], error }) => (
   <FieldWrap>
     <Label name={name} text={label} />
-    <select
-      className={`input-field appearance-none bg-no-repeat bg-right pr-10 ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
-      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239ca3af'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E")`, backgroundSize: '1.25rem', backgroundPosition: 'right 0.75rem center' }}
-      id={name} name={name} value={value ?? ''}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">Select an option…</option>
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>{opt.label}</option>
-      ))}
-    </select>
+    <div className="relative">
+      <select
+        className={`input-field appearance-none pr-10 cursor-pointer ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
+        id={name} name={name} value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">Select an option…</option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400">
+        <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </div>
+    </div>
     <ErrorMsg msg={error} />
   </FieldWrap>
 );
