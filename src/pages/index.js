@@ -79,24 +79,39 @@ export default function AuraGenPage() {
   }, [isConnected])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <Head><title>AuraGen – Self-Healing UI</title></Head>
+    <div className="min-h-screen bg-[#f8f9fb] text-gray-800 flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
+      <Head>
+        <title>AuraGen – Self-Healing Adaptive UI</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      </Head>
 
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-40 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40 transition-all">
+        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">A</span>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-sm shadow-blue-500/20">
+              <span className="text-white font-bold text-xs tracking-wider">AG</span>
             </div>
-            <span className="font-bold text-gray-800 text-lg">AuraGen</span>
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Self-Healing UI</span>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-gray-900 tracking-tight text-base">AuraGen</span>
+              <span className="text-[11px] font-medium tracking-wide bg-blue-50 text-blue-600 border border-blue-100/60 px-2 py-0.5 rounded-full">
+                Self-Healing UI
+              </span>
+            </div>
           </div>
-          {/* WS status dot */}
-          <div className="flex items-center gap-2 text-sm">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-400 animate-pulse'}`} />
-            <span className="text-gray-500">{isConnected ? 'Connected' : 'Demo Mode'}</span>
-            {/* Demo trigger button when not connected */}
+
+          {/* Right Status & Controls */}
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-gray-50 border border-gray-100">
+              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 ring-2 ring-emerald-100' : 'bg-amber-400 ring-2 ring-amber-100'}`} />
+              <span className="font-medium text-gray-500">
+                {isConnected ? 'Backend Connected' : 'Simulated Demo'}
+              </span>
+            </div>
+
+            {/* Demo trigger button */}
             {!isConnected && mode === 'original' && (
               <button
                 onClick={() => {
@@ -104,29 +119,64 @@ export default function AuraGenPage() {
                   setTimeout(() => {
                     setUiSchema(DEMO_SCHEMA)
                     setMode('wizard')
-                  }, 2000)
+                  }, 1800)
                 }}
-                className="ml-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50/30 text-xs font-medium shadow-sm transition-all duration-200"
               >
-                🧪 Simulate High Friction
+                <span>✨</span>
+                <span>Simulate High Friction</span>
               </button>
             )}
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-10">
         <TransitionManager mode={mode} cognitiveScore={cognitiveScore}>
           <AnimatePresence mode="wait">
-            {(mode === 'original') && (
-              // Placeholder for Member 1's FinancialForm - shows a card explaining integration
-              <div key="original" className="card max-w-2xl mx-auto text-center py-12">
-                <div className="text-5xl mb-4">📋</div>
-                <h1 className="text-2xl font-bold text-gray-800 mb-2">Financial Application Form</h1>
-                <p className="text-gray-500 mb-6">Member 1's FinancialForm component integrates here.</p>
-                <p className="text-sm text-gray-400">Click "Simulate High Friction" in the header to test the AI transformation →</p>
+            {mode === 'original' && (
+              <div key="original" className="max-w-xl mx-auto">
+                <div className="card text-center py-14 px-8 border border-gray-100/80 shadow-[0_4px_24px_rgba(0,0,0,0.03)] rounded-3xl bg-white">
+                  <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-blue-50 border border-blue-100/80 flex items-center justify-center text-2xl shadow-inner">
+                    📋
+                  </div>
+                  <h1 className="text-xl font-bold text-gray-900 tracking-tight mb-2">
+                    Standard Financial Application
+                  </h1>
+                  <p className="text-sm text-gray-500 max-w-sm mx-auto mb-8 leading-relaxed">
+                    Member 1's friction-monitored form component mounts here. Telemetry tracking will measure cognitive load in real-time.
+                  </p>
+
+                  <div className="p-4 rounded-2xl bg-gray-50/70 border border-gray-100 text-left mb-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-semibold text-gray-700">Preview Transformation</span>
+                      <span className="text-[10px] font-medium bg-white text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded">Demo</span>
+                    </div>
+                    <p className="text-xs text-gray-500 leading-normal mb-3">
+                      Trigger the automated transformation to see AuraGen self-heal this form into a clean conversational wizard.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setMode('loading')
+                        setTimeout(() => {
+                          setUiSchema(DEMO_SCHEMA)
+                          setMode('wizard')
+                        }, 1800)
+                      }}
+                      className="btn-primary w-full text-xs py-2.5"
+                    >
+                      Trigger UI Self-Healing →
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-gray-400">
+                    AST validation & allowed component registry active.
+                  </p>
+                </div>
               </div>
             )}
+
             {(mode === 'loading' || mode === 'wizard') && (
               <div key="wizard">
                 <DynamicRenderer
@@ -135,7 +185,7 @@ export default function AuraGenPage() {
                   preservedData={preservedFormData}
                   onComplete={(data) => {
                     console.log('Form completed:', data)
-                    alert('Application submitted! Data: ' + JSON.stringify(data, null, 2))
+                    alert('Application successfully submitted!\n\nData:\n' + JSON.stringify(data, null, 2))
                   }}
                   onCancel={() => {
                     setMode('original')
@@ -148,9 +198,14 @@ export default function AuraGenPage() {
         </TransitionManager>
       </main>
 
-      {/* Footer */}
-      <footer className="text-center py-6 text-xs text-gray-400">
-        AuraGen Member 4 – Dynamic UI Renderer | Branch: member-4-renderer
+      {/* Clean Footer */}
+      <footer className="py-6 border-t border-gray-100 text-center">
+        <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-400 gap-2">
+          <span>AuraGen – Self-Healing Generative UI</span>
+          <span className="font-mono text-[11px] text-gray-400 bg-gray-100/80 px-2 py-0.5 rounded">
+            branch: member-4-renderer
+          </span>
+        </div>
       </footer>
     </div>
   )

@@ -3,53 +3,40 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { getComponent } from '../lib/ComponentRegistry'
 
 const variants = {
-  enter: (direction) => ({
-    x: direction > 0 ? 300 : -300,
-    opacity: 0,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-  },
-  exit: (direction) => ({
-    x: direction > 0 ? -300 : 300,
-    opacity: 0,
-  }),
+  enter: (direction) => ({ x: direction > 0 ? 40 : -40, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit:  (direction) => ({ x: direction > 0 ? -40 : 40, opacity: 0 }),
 }
-
-const transition = { duration: 0.35, ease: 'easeInOut' }
+const transition = { duration: 0.28, ease: [0.4, 0, 0.2, 1] }
 
 export default function FormWizard({ schema, preservedData, onComplete, onCancel }) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
-  const [formData, setFormData] = useState(() => ({ ...(preservedData || {}) }))
+  const [formData, setFormData]   = useState(() => ({ ...(preservedData || {}) }))
   const [stepErrors, setStepErrors] = useState({})
   const [direction, setDirection] = useState(1)
 
-  const steps = useMemo(() => schema?.steps || [], [schema])
+  const steps      = useMemo(() => schema?.steps || [], [schema])
   const totalSteps = steps.length
   const currentStep = steps[currentStepIndex]
   const isFirstStep = currentStepIndex === 0
-  const isLastStep = currentStepIndex === totalSteps - 1
+  const isLastStep  = currentStepIndex === totalSteps - 1
+  const progressPct = totalSteps > 0 ? ((currentStepIndex + 1) / totalSteps) * 100 : 0
 
   const handleFieldChange = useCallback((name, value) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    setStepErrors((prev) => {
+    setFormData(prev => ({ ...prev, [name]: value }))
+    setStepErrors(prev => {
       if (!prev[name]) return prev
-      const next = { ...prev }
-      delete next[name]
-      return next
+      const next = { ...prev }; delete next[name]; return next
     })
   }, [])
 
   const validateCurrentStep = useCallback(() => {
     const errors = {}
-    if (!currentStep) return errors
-    for (const comp of currentStep.components || []) {
+    for (const comp of currentStep?.components || []) {
       if (comp.required) {
         const val = formData[comp.name]
-        if (val === undefined || val === null || val === '') {
-          errors[comp.name] = `${comp.label || comp.name} is required.`
-        }
+        if (val === undefined || val === null || val === '')
+          errors[comp.name] = `${comp.label || comp.name} is required`
       }
     }
     return errors
@@ -57,50 +44,32 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
 
   const handleNext = useCallback(() => {
     const errors = validateCurrentStep()
-    if (Object.keys(errors).length > 0) {
-      setStepErrors(errors)
-      return
-    }
+    if (Object.keys(errors).length > 0) { setStepErrors(errors); return }
     setStepErrors({})
-    if (isLastStep) {
-      onComplete && onComplete(formData)
-    } else {
-      setDirection(1)
-      setCurrentStepIndex((prev) => prev + 1)
-    }
+    if (isLastStep) { onComplete?.(formData) }
+    else { setDirection(1); setCurrentStepIndex(p => p + 1) }
   }, [validateCurrentStep, isLastStep, onComplete, formData])
 
   const handleBack = useCallback(() => {
-    if (isFirstStep) {
-      onCancel && onCancel()
-    } else {
-      setDirection(-1)
-      setCurrentStepIndex((prev) => prev - 1)
-      setStepErrors({})
-    }
+    if (isFirstStep) { onCancel?.() }
+    else { setDirection(-1); setCurrentStepIndex(p => p - 1); setStepErrors({}) }
   }, [isFirstStep, onCancel])
 
-  const progressPercent = totalSteps > 0 ? ((currentStepIndex + 1) / totalSteps) * 100 : 0
-
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      {/* Progress Bar */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-600">
-            Step {currentStepIndex + 1} of {totalSteps}
-          </span>
-          <span className="text-sm text-gray-400">{Math.round(progressPercent)}%</span>
+    <div className="min-h-[60vh] flex flex-col max-w-xl mx-auto w-full py-6 px-4">
+
+      {/* ── Progress header ── */}
+      <div className="mb-7">
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="step-chip">Step {currentStepIndex + 1} of {totalSteps}</span>
+          <span className="text-xs font-semibold text-gray-400">{Math.round(progressPct)}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
-          <div
-            className="bg-blue-500 h-2.5 rounded-full transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
+        <div className="progress-track">
+          <div className="progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
       </div>
 
-      {/* Animated Step */}
+      {/* ── Animated step card ── */}
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div
           key={currentStepIndex}
@@ -110,35 +79,37 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
           animate="center"
           exit="exit"
           transition={transition}
+          className="flex-1"
         >
-          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl mx-auto">
-            {/* Step Header */}
+          <div className="card">
+
+            {/* Step heading */}
             {currentStep?.title && (
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">{currentStep.title}</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-1 tracking-tight">
+                {currentStep.title}
+              </h2>
             )}
             {currentStep?.description && (
-              <p className="text-gray-500 mb-6">{currentStep.description}</p>
+              <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+                {currentStep.description}
+              </p>
             )}
 
-            {/* Step Fields */}
-            <div className="space-y-4">
+            {/* Fields */}
+            <div>
               {(currentStep?.components || []).map((comp) => {
                 const Component = getComponent(comp.type)
-                if (!Component) {
-                  return (
-                    <div
-                      key={comp.id || comp.name}
-                      className="rounded-lg bg-gray-100 text-gray-400 p-3 text-sm"
-                    >
-                      Unsupported component: {comp.type}
-                    </div>
-                  )
-                }
+                if (!Component) return (
+                  <div key={comp.id || comp.name}
+                    className="text-xs text-gray-400 bg-gray-50 border border-dashed border-gray-200 rounded-lg p-3 mb-4">
+                    Unknown component: <code>{comp.type}</code>
+                  </div>
+                )
                 return (
                   <Component
                     key={comp.id || comp.name}
                     {...comp}
-                    value={formData[comp.name] || ''}
+                    value={formData[comp.name] ?? ''}
                     onChange={(val) => handleFieldChange(comp.name, val)}
                     error={stepErrors[comp.name]}
                   />
@@ -146,22 +117,23 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
               })}
             </div>
 
-            {/* Navigation */}
-            <div className="flex justify-between mt-8">
+            {/* ── Navigation ── */}
+            <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
               <button
                 type="button"
                 className="btn-secondary"
                 onClick={handleBack}
                 disabled={isFirstStep && !onCancel}
               >
-                {isFirstStep ? '✕ Return to Form' : '← Back'}
+                {isFirstStep ? '✕ Exit' : '← Back'}
               </button>
+
               <button
                 type="button"
                 className="btn-primary"
                 onClick={handleNext}
               >
-                {isLastStep ? 'Submit ✓' : 'Next →'}
+                {isLastStep ? 'Submit Application ✓' : 'Continue →'}
               </button>
             </div>
           </div>

@@ -37,79 +37,41 @@ const DynamicRenderer = ({
       return (
         <motion.div
           key="loading"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
           transition={{ duration: 0.3 }}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '300px',
-            gap: '16px',
-          }}
+          className="card max-w-lg mx-auto py-16 px-8 flex flex-col items-center justify-center text-center shadow-[0_4px_24px_rgba(0,0,0,0.03)] border border-gray-100 rounded-3xl"
         >
-          {/* Pulsing blue circle animation */}
-          <motion.div
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.7, 1, 0.7],
-              boxShadow: [
-                '0 0 0 0 rgba(59, 130, 246, 0.4)',
-                '0 0 0 20px rgba(59, 130, 246, 0)',
-                '0 0 0 0 rgba(59, 130, 246, 0)',
-              ],
-            }}
-            transition={{
-              duration: 1.8,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
+          {/* Subtle soft pulsing circle */}
+          <div className="relative mb-6">
             <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                border: '3px solid rgba(255,255,255,0.3)',
-                borderTopColor: '#fff',
+              animate={{
+                scale: [1, 1.25, 1],
+                opacity: [0.35, 0.05, 0.35],
               }}
+              transition={{
+                duration: 2.2,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+              className="absolute -inset-2 rounded-full bg-blue-400 blur-sm"
             />
-          </motion.div>
-
-          <div style={{ textAlign: 'center' }}>
-            <p
-              style={{
-                fontSize: '1.125rem',
-                fontWeight: 600,
-                color: '#1e293b',
-                margin: 0,
-              }}
-            >
-              AuraGen is analyzing your experience...
-            </p>
-            <p
-              style={{
-                fontSize: '0.875rem',
-                color: '#64748b',
-                marginTop: '6px',
-              }}
-            >
-              Generating a personalized interface...
-            </p>
+            <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/25">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
+                className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white"
+              />
+            </div>
           </div>
+
+          <p className="text-base font-semibold text-gray-900 tracking-tight mb-1">
+            Adapting interface to your flow…
+          </p>
+          <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
+            AuraGen detected high friction and is generating a step-by-step layout.
+          </p>
         </motion.div>
       )
     }

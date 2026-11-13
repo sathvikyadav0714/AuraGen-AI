@@ -1,203 +1,210 @@
 import React from 'react';
 
-// TextInput
+/* ─── Shared micro-components ──────────────────────────────── */
+
+const FieldWrap = ({ children }) => (
+  <div className="flex flex-col gap-1 mb-5">{children}</div>
+);
+
+const Label = ({ name, text }) =>
+  text ? <label className="label-text" htmlFor={name}>{text}</label> : null;
+
+const ErrorMsg = ({ msg }) =>
+  msg ? (
+    <span className="error-text">
+      <svg className="w-3 h-3 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+      </svg>
+      {msg}
+    </span>
+  ) : null;
+
+/* ─── Input components ─────────────────────────────────────── */
+
 const TextInput = ({ label, name, value, onChange, placeholder, error }) => (
-  <div className="mb-4">
-    {label && <label className="label-text" htmlFor={name}>{label}</label>}
+  <FieldWrap>
+    <Label name={name} text={label} />
     <input
-      className="input-field"
-      type="text"
-      id={name}
-      name={name}
-      value={value ?? ''}
-      onChange={onChange}
-      placeholder={placeholder}
+      className={`input-field ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
+      type="text" id={name} name={name}
+      value={value ?? ''} placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
     />
-    {error && <span className="error-text">{error}</span>}
-  </div>
+    <ErrorMsg msg={error} />
+  </FieldWrap>
 );
 
-// NumberInput
 const NumberInput = ({ label, name, value, onChange, placeholder, error }) => (
-  <div className="mb-4">
-    {label && <label className="label-text" htmlFor={name}>{label}</label>}
+  <FieldWrap>
+    <Label name={name} text={label} />
     <input
-      className="input-field"
-      type="number"
-      id={name}
-      name={name}
-      value={value ?? ''}
-      onChange={onChange}
-      placeholder={placeholder}
+      className={`input-field ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
+      type="number" id={name} name={name}
+      value={value ?? ''} placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
     />
-    {error && <span className="error-text">{error}</span>}
-  </div>
+    <ErrorMsg msg={error} />
+  </FieldWrap>
 );
 
-// EmailInput
 const EmailInput = ({ label, name, value, onChange, placeholder, error }) => (
-  <div className="mb-4">
-    {label && <label className="label-text" htmlFor={name}>{label}</label>}
+  <FieldWrap>
+    <Label name={name} text={label} />
     <input
-      className="input-field"
-      type="email"
-      id={name}
-      name={name}
-      value={value ?? ''}
-      onChange={onChange}
-      placeholder={placeholder}
+      className={`input-field ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
+      type="email" id={name} name={name}
+      value={value ?? ''} placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
     />
-    {error && <span className="error-text">{error}</span>}
-  </div>
+    <ErrorMsg msg={error} />
+  </FieldWrap>
 );
 
-// PhoneInput
 const PhoneInput = ({ label, name, value, onChange, placeholder, error }) => (
-  <div className="mb-4">
-    {label && <label className="label-text" htmlFor={name}>{label}</label>}
+  <FieldWrap>
+    <Label name={name} text={label} />
     <input
-      className="input-field"
-      type="tel"
-      id={name}
-      name={name}
-      value={value ?? ''}
-      onChange={onChange}
-      placeholder={placeholder}
+      className={`input-field ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
+      type="tel" id={name} name={name}
+      value={value ?? ''} placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
     />
-    {error && <span className="error-text">{error}</span>}
-  </div>
+    <ErrorMsg msg={error} />
+  </FieldWrap>
 );
 
-// SelectInput
 const SelectInput = ({ label, name, value, onChange, options = [], error }) => (
-  <div className="mb-4">
-    {label && <label className="label-text" htmlFor={name}>{label}</label>}
+  <FieldWrap>
+    <Label name={name} text={label} />
     <select
-      className="input-field"
-      id={name}
-      name={name}
-      value={value ?? ''}
-      onChange={onChange}
+      className={`input-field appearance-none bg-no-repeat bg-right pr-10 ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
+      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239ca3af'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E")`, backgroundSize: '1.25rem', backgroundPosition: 'right 0.75rem center' }}
+      id={name} name={name} value={value ?? ''}
+      onChange={(e) => onChange(e.target.value)}
     >
-      <option value="">-- Select --</option>
+      <option value="">Select an option…</option>
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>{opt.label}</option>
       ))}
     </select>
-    {error && <span className="error-text">{error}</span>}
-  </div>
+    <ErrorMsg msg={error} />
+  </FieldWrap>
 );
 
-// TextArea
 const TextArea = ({ label, name, value, onChange, placeholder, error }) => (
-  <div className="mb-4">
-    {label && <label className="label-text" htmlFor={name}>{label}</label>}
+  <FieldWrap>
+    <Label name={name} text={label} />
     <textarea
-      className="input-field"
-      id={name}
-      name={name}
-      value={value ?? ''}
-      onChange={onChange}
-      placeholder={placeholder}
-      rows={4}
+      className={`input-field resize-none ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
+      id={name} name={name} rows={4}
+      value={value ?? ''} placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
     />
-    {error && <span className="error-text">{error}</span>}
-  </div>
+    <ErrorMsg msg={error} />
+  </FieldWrap>
 );
 
-// RadioGroup
-const RadioGroup = ({ label, name, value, onChange, options = [] }) => (
-  <div className="mb-4">
-    {label && <span className="label-text block mb-1">{label}</span>}
-    <div className="flex flex-col gap-1">
+const RadioGroup = ({ label, name, value, onChange, options = [], error }) => (
+  <FieldWrap>
+    <Label name={name} text={label} />
+    <div className="flex flex-col gap-2 mt-1">
       {options.map((opt) => (
-        <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+        <label
+          key={opt.value}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all duration-150
+            ${value === opt.value
+              ? 'border-blue-400 bg-blue-50/60 shadow-sm'
+              : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'}`}
+        >
           <input
-            type="radio"
-            name={name}
-            value={opt.value}
+            type="radio" name={name} value={opt.value}
             checked={value === opt.value}
-            onChange={onChange}
-            className="accent-blue-600"
+            onChange={(e) => onChange(e.target.value)}
+            className="accent-blue-600 w-4 h-4"
           />
-          <span className="text-gray-700">{opt.label}</span>
+          <span className={`text-sm font-medium ${value === opt.value ? 'text-blue-700' : 'text-gray-700'}`}>
+            {opt.label}
+          </span>
         </label>
       ))}
     </div>
-  </div>
+    <ErrorMsg msg={error} />
+  </FieldWrap>
 );
 
-// CheckboxGroup
-const CheckboxGroup = ({ label, name, value = [], onChange, options = [] }) => {
+const CheckboxGroup = ({ label, name, value = [], onChange, options = [], error }) => {
   const handleChange = (optValue) => {
     const current = Array.isArray(value) ? value : [];
     const next = current.includes(optValue)
       ? current.filter((v) => v !== optValue)
       : [...current, optValue];
-    // Simulate a synthetic event-like object
-    onChange({ target: { name, value: next } });
+    onChange(next);
   };
-
   return (
-    <div className="mb-4">
-      {label && <span className="label-text block mb-1">{label}</span>}
-      <div className="flex flex-col gap-1">
-        {options.map((opt) => (
-          <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              name={name}
-              value={opt.value}
-              checked={Array.isArray(value) && value.includes(opt.value)}
-              onChange={() => handleChange(opt.value)}
-              className="accent-blue-600"
-            />
-            <span className="text-gray-700">{opt.label}</span>
-          </label>
-        ))}
+    <FieldWrap>
+      <Label name={name} text={label} />
+      <div className="flex flex-col gap-2 mt-1">
+        {options.map((opt) => {
+          const checked = Array.isArray(value) && value.includes(opt.value);
+          return (
+            <label
+              key={opt.value}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all duration-150
+                ${checked ? 'border-blue-400 bg-blue-50/60 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'}`}
+            >
+              <input
+                type="checkbox" name={name} value={opt.value}
+                checked={checked}
+                onChange={() => handleChange(opt.value)}
+                className="accent-blue-600 w-4 h-4 rounded"
+              />
+              <span className={`text-sm font-medium ${checked ? 'text-blue-700' : 'text-gray-700'}`}>
+                {opt.label}
+              </span>
+            </label>
+          );
+        })}
       </div>
-    </div>
+      <ErrorMsg msg={error} />
+    </FieldWrap>
   );
 };
 
-// InfoBlock
 const InfoBlock = ({ title, message }) => (
-  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-    {title && <p className="font-semibold text-blue-800 mb-1">{title}</p>}
-    {message && <p className="text-blue-700 text-sm">{message}</p>}
+  <div className="info-block mb-5">
+    <svg className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+    </svg>
+    <div>
+      {title && <p className="font-semibold text-blue-800 text-xs mb-0.5">{title}</p>}
+      {message && <p className="text-blue-700 text-xs leading-relaxed">{message}</p>}
+    </div>
   </div>
 );
 
-// ProgressBar
 const ProgressBar = ({ value = 0, label }) => {
   const clamped = Math.min(100, Math.max(0, value));
   return (
-    <div className="mb-4">
-      {label && <span className="label-text block mb-1">{label}</span>}
-      <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-        <div
-          className="bg-blue-600 h-4 rounded-full transition-all duration-300"
-          style={{ width: `${clamped}%` }}
-        />
+    <div className="mb-5">
+      {label && <span className="label-text">{label}</span>}
+      <div className="progress-track">
+        <div className="progress-fill" style={{ width: `${clamped}%` }} />
       </div>
-      <span className="text-xs text-gray-500 mt-1 inline-block">{clamped}%</span>
+      <span className="text-xs text-gray-400 mt-1 inline-block">{clamped}%</span>
     </div>
   );
 };
 
-// Heading
 const Heading = ({ text }) => (
-  <h2 className="text-2xl font-bold text-gray-800 mb-2">{text}</h2>
+  <h2 className="text-xl font-bold text-gray-900 mb-1 tracking-tight">{text}</h2>
 );
 
-// Paragraph
 const Paragraph = ({ text }) => (
-  <p className="text-gray-600 mb-2">{text}</p>
+  <p className="text-sm text-gray-500 leading-relaxed mb-3">{text}</p>
 );
 
-// Divider
 const Divider = () => (
-  <hr className="my-4 border-gray-200" />
+  <hr className="my-5 border-gray-100" />
 );
 
 // ─── Registry ────────────────────────────────────────────────────────────────
