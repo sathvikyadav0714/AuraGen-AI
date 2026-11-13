@@ -82,9 +82,6 @@ export default function AuraGenPage() {
     <div className="min-h-screen bg-[#f8f9fb] text-gray-800 flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
       <Head>
         <title>AuraGen – Self-Healing Adaptive UI</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </Head>
 
       {/* Header */}
