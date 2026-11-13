@@ -1,14 +1,29 @@
 
-
-import { UI_GENERATION_PROMPT } from "./promptTemplates.js";
+import {
+    UI_GENERATION_PROMPT,
+    buildUserMessage
+} from "./promptTemplates.js";
 
 export async function generateUI(formContext) {
-    console.log("Generating simplified UI...");
+    try {
+        const userMessage = buildUserMessage(formContext);
 
-    console.log("Form Context:", formContext);
-    console.log("Prompt:", UI_GENERATION_PROMPT);
+        console.log("===== AURAGEN AI SERVICE =====");
 
-    return {
-        message: "AI service is ready for integration"
-    };
+        console.log("SYSTEM PROMPT:");
+        console.log(UI_GENERATION_PROMPT);
+
+        console.log("USER MESSAGE:");
+        console.log(userMessage);
+
+        return {
+            success: true,
+            systemPrompt: UI_GENERATION_PROMPT,
+            userMessage: userMessage
+        };
+
+    } catch (error) {
+        console.error("AI generation failed:", error);
+        throw error;
+    }
 }
