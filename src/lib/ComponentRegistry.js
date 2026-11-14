@@ -213,7 +213,26 @@ const Divider = () => (
   <hr className="my-5 border-gray-100" />
 );
 
-// ─── Registry ────────────────────────────────────────────────────────────────
+// ─── Registry & Metadata ───────────────────────────────────────────────────
+
+/**
+ * Metadata dictionary describing supported capabilities for each UI primitive
+ */
+export const COMPONENT_METADATA = {
+  TextInput: { category: 'input', supportedTypes: ['text'], hasLabel: true },
+  NumberInput: { category: 'input', supportedTypes: ['number'], hasLabel: true },
+  EmailInput: { category: 'input', supportedTypes: ['email'], hasLabel: true },
+  PhoneInput: { category: 'input', supportedTypes: ['tel'], hasLabel: true },
+  SelectInput: { category: 'selection', hasOptions: true, hasLabel: true },
+  TextArea: { category: 'input', multiline: true, hasLabel: true },
+  RadioGroup: { category: 'selection', hasOptions: true, hasLabel: true },
+  CheckboxGroup: { category: 'selection', hasOptions: true, multiple: true, hasLabel: true },
+  InfoBlock: { category: 'display', contextual: true },
+  ProgressBar: { category: 'display', metric: true },
+  Heading: { category: 'typography', level: 2 },
+  Paragraph: { category: 'typography' },
+  Divider: { category: 'layout' },
+};
 
 export const COMPONENT_REGISTRY = {
   TextInput,
@@ -231,14 +250,37 @@ export const COMPONENT_REGISTRY = {
   Divider,
 };
 
+/**
+ * Validates whether a component type exists in the registry allowlist
+ * @param {string} type
+ * @returns {boolean}
+ */
 export function isAllowedComponent(type) {
-  return type in COMPONENT_REGISTRY;
+  return Boolean(type && Object.prototype.hasOwnProperty.call(COMPONENT_REGISTRY, type));
 }
 
+/**
+ * Retrieves the React component matching the given type string
+ * @param {string} type
+ * @returns {React.ComponentType|null}
+ */
 export function getComponent(type) {
   return COMPONENT_REGISTRY[type] || null;
 }
 
+/**
+ * Returns all allowed component types in the registry
+ * @returns {string[]}
+ */
 export function getAllowedTypes() {
   return Object.keys(COMPONENT_REGISTRY);
+}
+
+/**
+ * Retrieves schema metadata for an allowed component
+ * @param {string} type
+ * @returns {object|null}
+ */
+export function getComponentMetadata(type) {
+  return COMPONENT_METADATA[type] || null;
 }

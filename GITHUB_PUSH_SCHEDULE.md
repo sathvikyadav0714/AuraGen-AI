@@ -100,3 +100,4 @@ Jab mentor ya interviewer aapse poochenge, toh ye key points ready rakhein:
 
 3. **How does the Transformation happen without page reload?**
    - Handled via `TransitionManager` and React's `AnimatePresence`. The page switches mode from `'original'` to `'wizard'` dynamically using Framer Motion animations.
+
