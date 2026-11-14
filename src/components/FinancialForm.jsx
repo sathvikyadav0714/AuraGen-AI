@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import FormField from './form/FormField';
+import { validateSingleField, validateFinancialForm } from '../utils/validation';
 
 const EMPLOYMENT_OPTIONS = [
   { value: 'salaried', label: 'Salaried Professional' },
@@ -33,91 +34,38 @@ export default function FinancialForm({ onValidationFriction, onFormChange, onSu
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-
-  // Field validation rules
-  const validateField = (name, value) => {
-    let error = '';
-
-    switch (name) {
-      case 'fullName':
-        if (!value.trim()) {
-          error = 'Full name is required';
-        } else if (value.trim().length < 3) {
-          error = 'Name must be at least 3 characters';
-        }
-        break;
-
-      case 'email':
-        if (!value.trim()) {
-          error = 'Email address is required';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
-          error = 'Enter a valid email address (e.g. name@example.com)';
-        }
-        break;
-
-      case 'phone':
-        if (!value.trim()) {
-          error = 'Phone number is required';
-        } else if (!/^[6-9]\d{9}$/.test(value.replace(/\D/g, ''))) {
-          error = 'Enter a valid 10-digit mobile number';
-        }
-        break;
-
-      case 'employmentStatus':
-        if (!value) {
-          error = 'Please select your employment status';
-        }
-        break;
-
-      case 'annualIncome':
-        if (!value) {
-          error = 'Annual income is required';
-        } else if (Number(value) <= 0) {
-          error = 'Income must be a positive number';
-        } else if (Number(value) < 100000) {
-          error = 'Minimum eligible annual income is ₹1,00,000';
-        }
-        break;
-
-      case 'loanAmount':
-        if (!value) {
-          error = 'Loan amount is required';
-        } else if (Number(value) <= 0) {
-          error = 'Loan amount must be greater than zero';
-        } else if (Number(value) < 10000) {
-          error = 'Minimum loan request is ₹10,000';
-        } else if (Number(value) > 50000000) {
-          error = 'Maximum loan limit is ₹5,00,00,000';
-        }
-        break;
-
-      case 'loanPurpose':
-        if (!value) {
-          error = 'Please specify your loan purpose';
-        }
-        break;
-
-      default:
-        break;
-    }
-
-    return error;
-  };
+  const [validationAttempts, setValidationAttempts] = useState(0);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     const fieldValue = type === 'checkbox' ? checked : value;
 
-    setFormData((prev) => {
-      const updated = { ...prev, [name]: fieldValue };
-      if (onFormChange) onFormChange(updated);
-      return updated;
-    });
+    const updatedForm = { ...formData, [name]: fieldValue };
+    setFormData(updatedForm);
 
-    // Validate if field has already been touched
+    if (onFormChange) {
+      onFormChange(updatedForm);
+    }
+
+    // Real-time re-validation for touched fields
     if (touched[name]) {
-      const fieldError = validateField(name, fieldValue);
-      setErrors((prev) => ({ ...prev, [name]: fieldError }));
+      const fieldError = validateSingleField(name, fieldValue, updatedForm);
+      setErrors((prev) => {
+        const next = { ...prev, [name]: fieldError };
+        if (!fieldError) delete next[name];
+        return next;
+      });
+
+      // If re-validating income, also check if loanAmount needs cross-validation update
+      if (name === 'annualIncome' && touched.loanAmount && formData.loanAmount) {
+        const loanErr = validateSingleField('loanAmount', formData.loanAmount, updatedForm);
+        setErrors((prev) => {
+          const next = { ...prev, loanAmount: loanErr };
+          if (!loanErr) delete next.loanAmount;
+          return next;
+        });
+      }
+
       if (fieldError && onValidationFriction) {
         onValidationFriction(name, fieldError);
       }
@@ -127,8 +75,13 @@ export default function FinancialForm({ onValidationFriction, onFormChange, onSu
   const handleBlur = (e) => {
     const { name, value } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
-    const fieldError = validateField(name, value);
-    setErrors((prev) => ({ ...prev, [name]: fieldError }));
+
+    const fieldError = validateSingleField(name, value, formData);
+    setErrors((prev) => {
+      const next = { ...prev, [name]: fieldError };
+      if (!fieldError) delete next[name];
+      return next;
+    });
 
     if (fieldError && onValidationFriction) {
       onValidationFriction(name, fieldError);
@@ -145,24 +98,18 @@ export default function FinancialForm({ onValidationFriction, onFormChange, onSu
     }, {});
     setTouched(allTouched);
 
-    // Run full validation
-    const newErrors = {};
-    Object.keys(formData).forEach((key) => {
-      if (key !== 'agreeToTerms') {
-        const error = validateField(key, formData[key]);
-        if (error) newErrors[key] = error;
-      }
-    });
+    // Run modular validation engine
+    const { isValid, errors: validationErrors, firstErrorField } = validateFinancialForm(formData);
+    setErrors(validationErrors);
+    setValidationAttempts((prev) => prev + 1);
 
-    if (!formData.agreeToTerms) {
-      newErrors.agreeToTerms = 'You must agree to the terms to proceed';
-    }
-
-    setErrors(newErrors);
-
-    if (Object.keys(newErrors).length > 0) {
+    if (!isValid) {
       if (onValidationFriction) {
-        onValidationFriction('form_submission', 'Multiple validation errors on submit', Object.keys(newErrors));
+        onValidationFriction(
+          firstErrorField,
+          validationErrors[firstErrorField],
+          Object.keys(validationErrors)
+        );
       }
       return;
     }
@@ -172,8 +119,10 @@ export default function FinancialForm({ onValidationFriction, onFormChange, onSu
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSubmitted(true);
-      if (onSubmitSuccess) onSubmitSuccess(formData);
-    }, 1200);
+      if (onSubmitSuccess) {
+        onSubmitSuccess(formData);
+      }
+    }, 1000);
   };
 
   if (isSubmitted) {
@@ -186,7 +135,7 @@ export default function FinancialForm({ onValidationFriction, onFormChange, onSu
         </div>
         <h3 className="text-xl font-bold text-slate-800 mb-1">Application Submitted!</h3>
         <p className="text-sm text-slate-500 mb-6">
-          Thank you, <span className="font-semibold text-slate-700">{formData.fullName}</span>. Your financial loan application has been received and is under review.
+          Thank you, <span className="font-semibold text-slate-700">{formData.fullName}</span>. Your financial application has been validated and submitted successfully.
         </p>
         <button
           onClick={() => {
@@ -205,11 +154,18 @@ export default function FinancialForm({ onValidationFriction, onFormChange, onSu
 
   return (
     <form onSubmit={handleSubmit} noValidate className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-sm">
-      <div className="mb-6 border-b border-slate-100 pb-4">
-        <h2 className="text-lg font-bold text-slate-900">Standard Financial Application</h2>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Please fill in all requested details accurately to process your loan eligibility.
-        </p>
+      <div className="mb-6 border-b border-slate-100 pb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Standard Financial Application</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Please fill in all requested details accurately to process your loan eligibility.
+          </p>
+        </div>
+        {validationAttempts > 0 && Object.keys(errors).length > 0 && (
+          <span className="text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-full">
+            {Object.keys(errors).length} {Object.keys(errors).length === 1 ? 'Error' : 'Errors'} Found
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
@@ -248,7 +204,7 @@ export default function FinancialForm({ onValidationFriction, onFormChange, onSu
           onChange={handleChange}
           onBlur={handleBlur}
           error={touched.phone ? errors.phone : ''}
-          helperText="10-digit mobile number"
+          helperText="10-digit mobile number starting with 6, 7, 8, or 9"
           required
         />
 
@@ -276,8 +232,9 @@ export default function FinancialForm({ onValidationFriction, onFormChange, onSu
           onChange={handleChange}
           onBlur={handleBlur}
           error={touched.annualIncome ? errors.annualIncome : ''}
-          min="0"
+          min="100000"
           step="10000"
+          helperText="Min. eligible income: ₹1,00,000"
           required
         />
 
@@ -291,8 +248,10 @@ export default function FinancialForm({ onValidationFriction, onFormChange, onSu
           onChange={handleChange}
           onBlur={handleBlur}
           error={touched.loanAmount ? errors.loanAmount : ''}
-          min="0"
+          min="10000"
+          max="50000000"
           step="5000"
+          helperText="Cannot exceed 10x gross annual income"
           required
         />
       </div>
@@ -336,6 +295,7 @@ export default function FinancialForm({ onValidationFriction, onFormChange, onSu
             setFormData(INITIAL_FORM_STATE);
             setErrors({});
             setTouched({});
+            setValidationAttempts(0);
           }}
           className="text-xs text-slate-500 hover:text-slate-800 font-medium px-3 py-2 rounded transition"
         >
@@ -353,7 +313,7 @@ export default function FinancialForm({ onValidationFriction, onFormChange, onSu
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              Processing...
+              Validating & Processing...
             </span>
           ) : (
             'Submit Application'

@@ -2,7 +2,8 @@ import React from 'react';
 import FormError from './FormError';
 
 /**
- * FormField is a reusable input wrapper with label, error display, and telemetry hooks.
+ * FormField is a reusable input wrapper with label, accessible error display,
+ * and telemetry attributes for behavioral tracking.
  */
 export default function FormField({
   id,
@@ -15,7 +16,7 @@ export default function FormField({
   onBlur,
   error,
   required = false,
-  options = [], // For select inputs
+  options = [],
   helperText = '',
   disabled = false,
   min,
@@ -24,11 +25,14 @@ export default function FormField({
 }) {
   const isSelect = type === 'select';
   const hasError = Boolean(error);
+  const inputId = id || name;
+  const errorId = `${inputId}-error`;
+  const helperId = `${inputId}-helper`;
 
   return (
     <div className="flex flex-col mb-4">
       <label
-        htmlFor={id || name}
+        htmlFor={inputId}
         className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5"
       >
         {label}
@@ -38,12 +42,14 @@ export default function FormField({
       <div className="relative">
         {isSelect ? (
           <select
-            id={id || name}
+            id={inputId}
             name={name}
             value={value}
             onChange={onChange}
             onBlur={onBlur}
             disabled={disabled}
+            aria-invalid={hasError}
+            aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
             data-telemetry-field={name}
             className={`input-base cursor-pointer appearance-none pr-9 ${hasError ? 'input-error' : ''}`}
           >
@@ -56,7 +62,7 @@ export default function FormField({
           </select>
         ) : (
           <input
-            id={id || name}
+            id={inputId}
             name={name}
             type={type}
             placeholder={placeholder}
@@ -67,6 +73,8 @@ export default function FormField({
             min={min}
             max={max}
             step={step}
+            aria-invalid={hasError}
+            aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
             data-telemetry-field={name}
             className={`input-base ${hasError ? 'input-error' : ''}`}
           />
@@ -82,10 +90,12 @@ export default function FormField({
       </div>
 
       {helperText && !hasError && (
-        <p className="mt-1 text-[11px] text-slate-400">{helperText}</p>
+        <p id={helperId} className="mt-1 text-[11px] text-slate-400">{helperText}</p>
       )}
 
-      <FormError error={error} />
+      <div id={errorId}>
+        <FormError error={error} />
+      </div>
     </div>
   );
 }
