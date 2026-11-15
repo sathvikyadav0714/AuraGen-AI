@@ -2,8 +2,12 @@ import React from 'react';
 import FormError from './FormError';
 
 /**
- * FormField is a reusable input wrapper with label, accessible error display,
- * and telemetry attributes for behavioral tracking.
+ * FormField is an enhanced accessible input wrapper.
+ * Features:
+ * - Responsive touch target styling
+ * - Visual valid/invalid states with animated icons
+ * - Currency / Phone prefix adornment support
+ * - Telemetry tracking hooks (data-telemetry-field)
  */
 export default function FormField({
   id,
@@ -19,6 +23,8 @@ export default function FormField({
   options = [],
   helperText = '',
   disabled = false,
+  prefix = '',
+  isValid = false, // When field is touched and has no errors
   min,
   max,
   step
@@ -29,17 +35,42 @@ export default function FormField({
   const errorId = `${inputId}-error`;
   const helperId = `${inputId}-helper`;
 
-  return (
-    <div className="flex flex-col mb-4">
-      <label
-        htmlFor={inputId}
-        className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5"
-      >
-        {label}
-        {required && <span className="text-rose-500 ml-1 font-bold">*</span>}
-      </label>
+  // Determine status class
+  let statusClass = 'border-slate-200 focus:border-indigo-600 focus:ring-indigo-500/20';
+  if (hasError) {
+    statusClass = 'input-error';
+  } else if (isValid && value) {
+    statusClass = 'input-success';
+  }
 
-      <div className="relative">
+  return (
+    <div className="flex flex-col mb-4.5 sm:mb-5">
+      <div className="flex items-center justify-between mb-1.5">
+        <label
+          htmlFor={inputId}
+          className="block text-xs font-semibold text-slate-700 uppercase tracking-wider select-none"
+        >
+          {label}
+          {required && <span className="text-rose-500 ml-1 font-bold" aria-hidden="true">*</span>}
+        </label>
+        {isValid && value && !hasError && (
+          <span className="text-[11px] font-medium text-emerald-600 flex items-center gap-1 animate-fadeIn">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+            </svg>
+            Valid
+          </span>
+        )}
+      </div>
+
+      <div className="relative flex items-center">
+        {/* Leading Prefix Adornment (e.g. ₹ or +91) */}
+        {prefix && (
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-medium text-sm select-none">
+            {prefix}
+          </div>
+        )}
+
         {isSelect ? (
           <select
             id={inputId}
@@ -51,7 +82,7 @@ export default function FormField({
             aria-invalid={hasError}
             aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
             data-telemetry-field={name}
-            className={`input-base cursor-pointer appearance-none pr-9 ${hasError ? 'input-error' : ''}`}
+            className={`input-base cursor-pointer appearance-none pr-9 text-slate-800 ${prefix ? 'pl-9' : ''} ${statusClass}`}
           >
             <option value="">{placeholder || 'Select an option...'}</option>
             {options.map((opt) => (
@@ -76,10 +107,11 @@ export default function FormField({
             aria-invalid={hasError}
             aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
             data-telemetry-field={name}
-            className={`input-base ${hasError ? 'input-error' : ''}`}
+            className={`input-base text-slate-800 ${prefix ? 'pl-9' : ''} ${isValid && value && !hasError ? 'pr-9' : ''} ${statusClass}`}
           />
         )}
 
+        {/* Trailing Icon for Select */}
         {isSelect && (
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,10 +119,33 @@ export default function FormField({
             </svg>
           </div>
         )}
+
+        {/* Trailing Valid Checkmark for Text/Number/Tel Inputs */}
+        {!isSelect && isValid && value && !hasError && (
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-emerald-500 animate-fadeIn">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        )}
+
+        {/* Trailing Error Exclamation Icon */}
+        {!isSelect && hasError && (
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-rose-500 animate-fadeIn">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+              <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="12" cy="16" r="1" fill="currentColor" />
+            </svg>
+          </div>
+        )}
       </div>
 
       {helperText && !hasError && (
-        <p id={helperId} className="mt-1 text-[11px] text-slate-400">{helperText}</p>
+        <p id={helperId} className="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1">
+          <span>ℹ️</span>
+          <span>{helperText}</span>
+        </p>
       )}
 
       <div id={errorId}>
