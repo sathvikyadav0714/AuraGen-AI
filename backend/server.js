@@ -3,7 +3,11 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
-const { createSession, getSession } = require("./sessionManager");
+const {
+    createSession,
+    getSession,
+    addTelemetryEvent
+} = require("./sessionManager");
 
 const app = express();
 
@@ -44,6 +48,71 @@ app.get("/api/sessions/:sessionId", (req, res) => {
     res.status(200).json({
         success: true,
         data: session
+    });
+});
+
+
+// Receive user telemetry events
+app.post("/api/sessions/:sessionId/telemetry", (req, res) => {
+
+    const { eventType, field, cognitiveLoadScore } = req.body || {};
+
+    const allowedEvents = [
+        "rage_click",
+        "hesitation",
+        "validation_error",
+        "failed_interaction",
+        "mouse_movement"
+    ];
+
+    if (!allowedEvents.includes(eventType)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid telemetry event type"
+        });
+    }
+
+    if (
+        cognitiveLoadScore !== undefined &&
+        (typeof cognitiveLoadScore !== "number" ||
+         !Number.isFinite(cognitiveLoadScore) ||
+         cognitiveLoadScore < 0 ||
+         cognitiveLoadScore > 100)
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: "Cognitive load score must be between 0 and 100"
+        });
+    }
+
+    if (field !== undefined && typeof field !== "string") {
+        return res.status(400).json({
+            success: false,
+            message: "Field must be a string"
+        });
+    }
+
+    const event = addTelemetryEvent(
+        req.params.sessionId,
+        { eventType, field, cognitiveLoadScore }
+    );
+
+    if (!event) {
+        return res.status(404).json({
+            success: false,
+            message: "Session not found"
+        });
+    }
+
+    const session = getSession(req.params.sessionId);
+
+    res.status(201).json({
+        success: true,
+        message: "Telemetry event recorded successfully",
+        data: {
+            event,
+            cognitiveLoadScore: session.cognitiveLoadScore
+        }
     });
 });
 

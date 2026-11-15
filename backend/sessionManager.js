@@ -23,7 +23,30 @@ function getSession(sessionId) {
     return sessions.get(sessionId);
 }
 
+// Add telemetry event to a user session
+function addTelemetryEvent(sessionId, event) {
+    const session = sessions.get(sessionId);
+
+    if (!session) {
+        return null;
+    }
+
+    const telemetryEvent = {
+        ...event,
+        timestamp: new Date().toISOString()
+    };
+
+    session.interactionHistory.push(telemetryEvent);
+
+    if (event.cognitiveLoadScore !== undefined) {
+        session.cognitiveLoadScore = event.cognitiveLoadScore;
+    }
+
+    return telemetryEvent;
+}
+
 module.exports = {
     createSession,
-    getSession
+    getSession,
+    addTelemetryEvent
 };
