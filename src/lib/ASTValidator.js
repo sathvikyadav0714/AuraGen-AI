@@ -244,7 +244,7 @@ export function validateUISchema(schema) {
 }
 
 // ---------------------------------------------------------------------------
-// sanitizeString
+// sanitizeString & sanitizeSchema
 // ---------------------------------------------------------------------------
 
 /**
@@ -273,6 +273,31 @@ export function sanitizeString(str) {
   return result;
 }
 
+/**
+ * Recursively deep-sanitizes all string fields in a UI schema
+ * @param {object} schema
+ * @returns {object} Cleaned schema clone
+ */
+export function sanitizeSchema(schema) {
+  if (!schema || typeof schema !== 'object') return schema;
+
+  if (Array.isArray(schema)) {
+    return schema.map(sanitizeSchema);
+  }
+
+  const cleaned = {};
+  for (const [key, val] of Object.entries(schema)) {
+    if (typeof val === 'string') {
+      cleaned[key] = sanitizeString(val);
+    } else if (typeof val === 'object' && val !== null) {
+      cleaned[key] = sanitizeSchema(val);
+    } else {
+      cleaned[key] = val;
+    }
+  }
+  return cleaned;
+}
+
 // ---------------------------------------------------------------------------
 // Default export
 // ---------------------------------------------------------------------------
@@ -282,5 +307,8 @@ export default {
   validateComponent,
   validateStep,
   sanitizeString,
+  sanitizeSchema,
   ALLOWED_COMPONENT_TYPES,
+  ALLOWED_STEP_KEYS,
+  ALLOWED_COMPONENT_KEYS,
 };
