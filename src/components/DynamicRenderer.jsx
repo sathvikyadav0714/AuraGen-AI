@@ -1,9 +1,40 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, Component } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ASTValidator from '../lib/ASTValidator'
 import { getComponent } from '../lib/ComponentRegistry'
 import FormWizard from './FormWizard'
 import FallbackUI from './FallbackUI'
+
+/**
+ * Error boundary component to catch and isolate any runtime rendering faults
+ */
+class RendererErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('[DynamicRenderer ErrorBoundary caught error]:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <FallbackUI
+          errors={[(this.state.error && this.state.error.message) || 'Unexpected rendering failure.']}
+          message="A runtime error occurred while rendering the conversational interface."
+          onReturnToForm={this.props.onCancel}
+        />
+      )
+    }
+    return this.props.children
+  }
+}
 
 const DynamicRenderer = ({
   uiSchema,
@@ -21,11 +52,16 @@ const DynamicRenderer = ({
       return
     }
 
+    const startTime = performance.now()
     const result = ASTValidator.validateUISchema(uiSchema)
     setValidationResult(result)
 
     if (result.valid) {
-      setValidatedSchema(uiSchema)
+      // Deep-sanitize schema strings before passing to wizard
+      const sanitized = ASTValidator.sanitizeSchema ? ASTValidator.sanitizeSchema(uiSchema) : uiSchema
+      setValidatedSchema(sanitized)
+      const parseDuration = (performance.now() - startTime).toFixed(2)
+      console.info(`[DynamicRenderer] Schema parsed & validated successfully in ${parseDuration}ms`)
     } else {
       setValidatedSchema(null)
       console.error('[DynamicRenderer] Schema validation errors:', result.errors)
@@ -113,7 +149,9 @@ const DynamicRenderer = ({
         transition={{ duration: 0.4, ease: 'easeOut' }}
       >
         <AnimatePresence mode="wait">
-          {renderContent()}
+          <RendererErrorBoundary onCancel={onCancel}>
+            {renderContent()}
+          </RendererErrorBoundary>
         </AnimatePresence>
       </motion.div>
     </AnimatePresence>
