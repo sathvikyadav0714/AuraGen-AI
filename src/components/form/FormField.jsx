@@ -6,7 +6,7 @@ import FormError from './FormError';
  * Features:
  * - Responsive touch target styling
  * - Visual valid/invalid states with animated icons
- * - Currency / Phone prefix adornment support
+ * - Colorful currency / phone adornments
  * - Telemetry tracking hooks (data-telemetry-field)
  */
 export default function FormField({
@@ -24,7 +24,7 @@ export default function FormField({
   helperText = '',
   disabled = false,
   prefix = '',
-  isValid = false, // When field is touched and has no errors
+  isValid = false,
   min,
   max,
   step
@@ -54,8 +54,8 @@ export default function FormField({
           {required && <span className="text-rose-500 ml-1 font-bold" aria-hidden="true">*</span>}
         </label>
         {isValid && value && !hasError && (
-          <span className="text-[11px] font-medium text-emerald-600 flex items-center gap-1 animate-fadeIn">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full flex items-center gap-1 animate-fadeIn shadow-2xs">
+            <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
             </svg>
             Valid
@@ -63,11 +63,13 @@ export default function FormField({
         )}
       </div>
 
-      <div className="relative flex items-center">
-        {/* Leading Prefix Adornment (e.g. ₹ or +91) */}
+      <div className="relative flex items-center group">
+        {/* Leading Prefix Adornment (e.g. ₹ or +91) with colorful styling */}
         {prefix && (
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-medium text-sm select-none">
-            {prefix}
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none select-none">
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+              {prefix}
+            </span>
           </div>
         )}
 
@@ -82,7 +84,7 @@ export default function FormField({
             aria-invalid={hasError}
             aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
             data-telemetry-field={name}
-            className={`input-base cursor-pointer appearance-none pr-9 text-slate-800 ${prefix ? 'pl-9' : ''} ${statusClass}`}
+            className={`input-base cursor-pointer appearance-none pr-9 text-slate-800 ${prefix ? 'pl-14' : ''} ${statusClass}`}
           >
             <option value="">{placeholder || 'Select an option...'}</option>
             {options.map((opt) => (
@@ -107,43 +109,45 @@ export default function FormField({
             aria-invalid={hasError}
             aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
             data-telemetry-field={name}
-            className={`input-base text-slate-800 ${prefix ? 'pl-9' : ''} ${isValid && value && !hasError ? 'pr-9' : ''} ${statusClass}`}
+            className={`input-base text-slate-800 ${prefix ? 'pl-14' : ''} ${isValid && value && !hasError ? 'pr-9' : ''} ${statusClass}`}
           />
         )}
 
         {/* Trailing Icon for Select */}
         {isSelect && (
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-indigo-500">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         )}
 
-        {/* Trailing Valid Checkmark for Text/Number/Tel Inputs */}
+        {/* Trailing Valid Checkmark */}
         {!isSelect && isValid && value && !hasError && (
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-emerald-500 animate-fadeIn">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-            </svg>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-emerald-500 animate-fadeIn">
+            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+              <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
           </div>
         )}
 
         {/* Trailing Error Exclamation Icon */}
         {!isSelect && hasError && (
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-rose-500 animate-fadeIn">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-              <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <circle cx="12" cy="16" r="1" fill="currentColor" />
-            </svg>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-rose-500 animate-fadeIn">
+            <div className="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center">
+              <svg className="w-3 h-3 text-rose-600 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4m0 4h.01" />
+              </svg>
+            </div>
           </div>
         )}
       </div>
 
       {helperText && !hasError && (
-        <p id={helperId} className="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1">
-          <span>ℹ️</span>
+        <p id={helperId} className="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1.5 font-medium">
+          <span className="text-indigo-400">●</span>
           <span>{helperText}</span>
         </p>
       )}
