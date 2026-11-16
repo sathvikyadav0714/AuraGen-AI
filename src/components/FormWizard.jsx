@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getComponent } from '../lib/ComponentRegistry'
 
@@ -14,6 +14,7 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
   const [formData, setFormData]   = useState(() => ({ ...(preservedData || {}) }))
   const [stepErrors, setStepErrors] = useState({})
   const [direction, setDirection] = useState(1)
+  const stepContainerRef = useRef(null)
 
   const steps      = useMemo(() => schema?.steps || [], [schema])
   const totalSteps = steps.length
@@ -21,6 +22,16 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
   const isFirstStep = currentStepIndex === 0
   const isLastStep  = currentStepIndex === totalSteps - 1
   const progressPct = totalSteps > 0 ? ((currentStepIndex + 1) / totalSteps) * 100 : 0
+
+  // Auto-focus first input field on step change
+  useEffect(() => {
+    if (stepContainerRef.current) {
+      const firstInput = stepContainerRef.current.querySelector('input:not([type=hidden]), select, textarea')
+      if (firstInput) {
+        firstInput.focus()
+      }
+    }
+  }, [currentStepIndex])
 
   const handleFieldChange = useCallback((name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }))
@@ -55,16 +66,46 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
     else { setDirection(-1); setCurrentStepIndex(p => p - 1); setStepErrors({}) }
   }, [isFirstStep, onCancel])
 
+  // Support Enter key for quick advancement
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault()
+      handleNext()
+    }
+  }, [handleNext])
+
   return (
-    <div className="min-h-[60vh] flex flex-col max-w-xl mx-auto w-full py-6 px-4">
+    <div
+      className="min-h-[60vh] flex flex-col max-w-xl mx-auto w-full py-6 px-4"
+      onKeyDown={handleKeyDown}
+      role="form"
+      aria-label="Conversational Application Wizard"
+    >
 
       {/* ── Progress header ── */}
-      <div className="mb-7">
+      <div className="mb-7" role="region" aria-label="Wizard Progress">
         <div className="flex items-center justify-between mb-2.5">
-          <span className="step-chip">Step {currentStepIndex + 1} of {totalSteps}</span>
+          <div className="flex items-center gap-2">
+            <span className="step-chip" aria-current="step">Step {currentStepIndex + 1} of {totalSteps}</span>
+            {/* Step dot indicators */}
+            <div className="flex items-center gap-1.5 ml-2">
+              {steps.map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                    idx === currentStepIndex
+                      ? 'bg-blue-600 scale-125'
+                      : idx < currentStepIndex
+                      ? 'bg-blue-300'
+                      : 'bg-gray-200'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
           <span className="text-xs font-semibold text-gray-400">{Math.round(progressPct)}%</span>
         </div>
-        <div className="progress-track">
+        <div className="progress-track" role="progressbar" aria-valuenow={Math.round(progressPct)} aria-valuemin={0} aria-valuemax={100}>
           <div className="progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
       </div>
@@ -81,7 +122,7 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
           transition={transition}
           className="flex-1"
         >
-          <div className="card">
+          <div className="card" ref={stepContainerRef}>
 
             {/* Step heading */}
             {currentStep?.title && (
@@ -96,7 +137,7 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
             )}
 
             {/* Fields */}
-            <div>
+            <div aria-live="polite">
               {(currentStep?.components || []).map((comp) => {
                 const Component = getComponent(comp.type)
                 if (!Component) return (
@@ -124,6 +165,7 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
                 className="btn-secondary"
                 onClick={handleBack}
                 disabled={isFirstStep && !onCancel}
+                aria-label={isFirstStep ? 'Exit conversational wizard' : 'Go to previous step'}
               >
                 {isFirstStep ? '✕ Exit' : '← Back'}
               </button>
@@ -132,6 +174,7 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
                 type="button"
                 className="btn-primary"
                 onClick={handleNext}
+                aria-label={isLastStep ? 'Submit final application' : 'Continue to next step'}
               >
                 {isLastStep ? 'Submit Application ✓' : 'Continue →'}
               </button>
