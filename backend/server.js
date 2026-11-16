@@ -117,6 +117,35 @@ app.post("/api/sessions/:sessionId/telemetry", (req, res) => {
 });
 
 
+// Get telemetry summary for a user session
+app.get("/api/sessions/:sessionId/telemetry/summary", (req, res) => {
+    const session = getSession(req.params.sessionId);
+
+    if (!session) {
+        return res.status(404).json({
+            success: false,
+            message: "Session not found"
+        });
+    }
+
+    const events = session.interactionHistory;
+
+    const summary = {
+        totalEvents: events.length,
+        rageClicks: events.filter(e => e.eventType === "rage_click").length,
+        hesitations: events.filter(e => e.eventType === "hesitation").length,
+        validationErrors: events.filter(e => e.eventType === "validation_error").length,
+        cognitiveLoadScore: session.cognitiveLoadScore
+    };
+
+    res.status(200).json({
+        success: true,
+        message: "Telemetry summary retrieved successfully",
+        data: summary
+    });
+});
+
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
