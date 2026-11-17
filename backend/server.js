@@ -3,6 +3,8 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+const { evaluateFriction } = require("./frictionMonitor");
+
 const {
     createSession,
     getSession,
@@ -51,7 +53,6 @@ app.get("/api/sessions/:sessionId", (req, res) => {
     });
 });
 
-
 // Receive user telemetry events
 app.post("/api/sessions/:sessionId/telemetry", (req, res) => {
 
@@ -74,10 +75,12 @@ app.post("/api/sessions/:sessionId/telemetry", (req, res) => {
 
     if (
         cognitiveLoadScore !== undefined &&
-        (typeof cognitiveLoadScore !== "number" ||
-         !Number.isFinite(cognitiveLoadScore) ||
-         cognitiveLoadScore < 0 ||
-         cognitiveLoadScore > 100)
+        (
+            typeof cognitiveLoadScore !== "number" ||
+            !Number.isFinite(cognitiveLoadScore) ||
+            cognitiveLoadScore < 0 ||
+            cognitiveLoadScore > 100
+        )
     ) {
         return res.status(400).json({
             success: false,
@@ -92,33 +95,36 @@ app.post("/api/sessions/:sessionId/telemetry", (req, res) => {
         });
     }
 
-    const event = addTelemetryEvent(
-        req.params.sessionId,
-        { eventType, field, cognitiveLoadScore }
-    );
+    const session = getSession(req.params.sessionId);
 
-    if (!event) {
+    if (!session) {
         return res.status(404).json({
             success: false,
             message: "Session not found"
         });
     }
 
-    const session = getSession(req.params.sessionId);
+    const event = addTelemetryEvent(
+        req.params.sessionId,
+        { eventType, field, cognitiveLoadScore }
+    );
+
+    const frictionStatus = evaluateFriction(session);
 
     res.status(201).json({
         success: true,
         message: "Telemetry event recorded successfully",
         data: {
             event,
-            cognitiveLoadScore: session.cognitiveLoadScore
+            cognitiveLoadScore: session.cognitiveLoadScore,
+            friction: frictionStatus
         }
     });
 });
 
-
 // Get telemetry summary for a user session
 app.get("/api/sessions/:sessionId/telemetry/summary", (req, res) => {
+
     const session = getSession(req.params.sessionId);
 
     if (!session) {
@@ -145,7 +151,7 @@ app.get("/api/sessions/:sessionId/telemetry/summary", (req, res) => {
     });
 });
 
-
+// Server
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

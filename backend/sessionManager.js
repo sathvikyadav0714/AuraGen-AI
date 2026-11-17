@@ -11,6 +11,7 @@ function createSession() {
         formData: {},
         cognitiveLoadScore: 0,
         interactionHistory: [],
+        generationTriggered: false,
         createdAt: new Date()
     };
 
