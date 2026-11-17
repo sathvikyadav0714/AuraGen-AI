@@ -44,10 +44,59 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
   const validateCurrentStep = useCallback(() => {
     const errors = {}
     for (const comp of currentStep?.components || []) {
+      const val = formData[comp.name]
+      const label = comp.label || comp.name
+
+      // 1. Required field validation
       if (comp.required) {
-        const val = formData[comp.name]
-        if (val === undefined || val === null || val === '')
-          errors[comp.name] = `${comp.label || comp.name} is required`
+        if (val === undefined || val === null || val === '') {
+          errors[comp.name] = `${label} is required`
+          continue
+        }
+        if (Array.isArray(val) && val.length === 0) {
+          errors[comp.name] = `Please select at least one option for ${label}`
+          continue
+        }
+      }
+
+      // Skip format validation if field is empty and not required
+      if (val === undefined || val === null || val === '') {
+        continue
+      }
+
+      // 2. Email format validation
+      if (comp.type === 'EmailInput' || comp.name === 'email') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(String(val).trim())) {
+          errors[comp.name] = 'Please enter a valid email address'
+          continue
+        }
+      }
+
+      // 3. Phone format validation
+      if (comp.type === 'PhoneInput' || comp.name === 'phone') {
+        const cleanPhone = String(val).replace(/[\s-]/g, '')
+        if (!/^\+?\d{10,13}$/.test(cleanPhone)) {
+          errors[comp.name] = 'Please enter a valid phone number (at least 10 digits)'
+          continue
+        }
+      }
+
+      // 4. Number bounds validation (min / max)
+      if (comp.type === 'NumberInput' || typeof comp.min === 'number' || typeof comp.max === 'number') {
+        const num = Number(val)
+        if (isNaN(num)) {
+          errors[comp.name] = `${label} must be a valid number`
+          continue
+        }
+        if (typeof comp.min === 'number' && num < comp.min) {
+          errors[comp.name] = `${label} must be at least ${comp.min}`
+          continue
+        }
+        if (typeof comp.max === 'number' && num > comp.max) {
+          errors[comp.name] = `${label} cannot exceed ${comp.max}`
+          continue
+        }
       }
     }
     return errors
