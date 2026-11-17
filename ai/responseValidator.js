@@ -1,5 +1,6 @@
 
 export function validateAIResponse(response) {
+    // Check whether response is provided
     if (!response || typeof response !== "string") {
         return {
             valid: false,
@@ -8,8 +9,10 @@ export function validateAIResponse(response) {
     }
 
     try {
+        // Convert JSON string into JavaScript object
         const parsedResponse = JSON.parse(response);
 
+        // Ensure response is a JSON object
         if (
             typeof parsedResponse !== "object" ||
             parsedResponse === null ||
@@ -18,22 +21,36 @@ export function validateAIResponse(response) {
             throw new Error("AI response must be a JSON object.");
         }
 
-        const requiredFields = [
-            "title",
-            "steps",
-            "navigation",
-            "progress"
-        ];
+        // Check required fields and expected data types
+        const requiredFields = {
+            title: "string",
+            steps: "array",
+            navigation: "array",
+            progress: "number"
+        };
 
-        const missingFields = requiredFields.filter(
-            field => !(field in parsedResponse)
-        );
+        for (const [field, expectedType] of Object.entries(requiredFields)) {
+            if (!(field in parsedResponse)) {
+                throw new Error(`Missing required field: ${field}`);
+            }
 
-        if (missingFields.length > 0) {
-            return {
-                valid: false,
-                error: `Missing required fields: ${missingFields.join(", ")}`
-            };
+            const actualType = Array.isArray(parsedResponse[field])
+                ? "array"
+                : typeof parsedResponse[field];
+
+            if (actualType !== expectedType) {
+                throw new Error(
+                    `${field} must be of type ${expectedType}.`
+                );
+            }
+        }
+
+        // Validate progress range
+        if (
+            parsedResponse.progress < 0 ||
+            parsedResponse.progress > 100
+        ) {
+            throw new Error("Progress must be between 0 and 100.");
         }
 
         return {
@@ -48,3 +65,4 @@ export function validateAIResponse(response) {
         };
     }
 }
+
