@@ -1,12 +1,34 @@
 import React, { useState } from 'react';
 import FinancialForm from './components/FinancialForm';
+import useTelemetry from './hooks/useTelemetry';
+import { formatDuration } from './utils/telemetry';
 
 export default function App() {
   const [lastValidationFriction, setLastValidationFriction] = useState(null);
   const [extractedContext, setExtractedContext] = useState(null);
   const [submittedData, setSubmittedData] = useState(null);
 
+  // Initialize live non-invasive telemetry hook
+  const { telemetry, recordValidationError, resetTelemetry } = useTelemetry({
+    onFrictionEvent: (event) => {
+      if (event.type === 'rage_click') {
+        setLastValidationFriction({
+          field: event.target,
+          error: `Rage Click Burst Detected (${event.clicksInBurst} clicks within 600ms)`,
+          timestamp: new Date().toLocaleTimeString()
+        });
+      } else if (event.type === 'hesitation') {
+        setLastValidationFriction({
+          field: event.target,
+          error: `High Hesitation Detected (${formatDuration(event.durationMs)} before typing)`,
+          timestamp: new Date().toLocaleTimeString()
+        });
+      }
+    }
+  });
+
   const handleValidationFriction = (field, error, allErrors = []) => {
+    recordValidationError(field, error);
     setLastValidationFriction({
       field,
       error,
@@ -17,10 +39,6 @@ export default function App() {
 
   const handleContextExtracted = (context) => {
     setExtractedContext(context);
-  };
-
-  const handleFormChange = (data) => {
-    // Draft is automatically persisted in sessionStorage by FinancialForm
   };
 
   return (
@@ -49,21 +67,54 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Live Telemetry Status Pill */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-semibold text-indigo-700 shadow-2xs">
+              <span className={`w-2 h-2 rounded-full ${telemetry.isCurrentlyInactive ? 'bg-amber-400' : 'bg-indigo-500 animate-pulse'}`} />
+              <span>{telemetry.isCurrentlyInactive ? 'Idle (Inactivity)' : 'Telemetry Live'}</span>
+            </div>
+
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Draft Auto-Saved</span>
+              <span>Auto-Saved</span>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-10 sm:py-12">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        {/* Live Behavioral Telemetry Mini-Bar (Day 6 Deliverable) */}
+        <div className="mb-6 p-3 sm:p-4 bg-white/90 backdrop-blur-md rounded-2xl border border-indigo-100 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+            <span className="font-bold text-slate-800">useTelemetry Hook Active:</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 font-mono text-[11px]">
+            <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
+              🖱️ Velocity: <strong className="text-indigo-600">{telemetry.cursorVelocity}</strong> px/ms
+            </span>
+            <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
+              🎯 Clicks: <strong className="text-slate-900">{telemetry.totalClickCount}</strong>
+            </span>
+            <span className={`px-2 py-1 rounded-md ${telemetry.rageClickCount > 0 ? 'bg-rose-100 text-rose-800 font-bold' : 'bg-slate-100 text-slate-700'}`}>
+              ⚡ Rage Clicks: <strong>{telemetry.rageClickCount}</strong>
+            </span>
+            <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
+              ⏳ Inactivity: <strong className="text-amber-600">{formatDuration(telemetry.totalInactivityDurationMs)}</strong>
+            </span>
+            <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
+              🛑 Errors: <strong className="text-rose-600">{telemetry.validationErrorCount}</strong>
+            </span>
+          </div>
+        </div>
+
         {/* Hero Section */}
-        <div className="mb-10 text-center sm:text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100/70 border border-indigo-200/80 text-indigo-800 text-xs font-bold mb-4 shadow-2xs">
-            <span className="animate-spin text-sm leading-none">⚙️</span>
-            <span>AuraGen Adaptive Telemetry Active</span>
+        <div className="mb-8 text-center sm:text-left">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100/70 border border-indigo-200/80 text-indigo-800 text-xs font-bold mb-3 shadow-2xs">
+            <span>✨ Week 2 Milestone</span>
+            <span>•</span>
+            <span>Behavioral Telemetry & Friction Tracking</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
@@ -73,49 +124,16 @@ export default function App() {
             </span>
           </h1>
 
-          <p className="text-sm sm:text-base text-slate-600 mt-2.5 max-w-2xl leading-relaxed">
-            AuraGen actively monitors cognitive load, cursor hesitation, and interaction friction. If complexity causes frustration, our generative AI self-heals this form into a guided conversational experience.
+          <p className="text-sm sm:text-base text-slate-600 mt-2 max-w-2xl leading-relaxed">
+            Move your cursor, test rapid clicking, or pause to experience AuraGen's passive behavioral telemetry in real-time.
           </p>
-
-          {/* 3 Colorful Feature Pills */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
-            <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-white/80 border border-indigo-100/80 shadow-2xs">
-              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-bold">
-                🎯
-              </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-slate-800">Friction Detection</p>
-                <p className="text-[11px] text-slate-400">Rage clicks & hesitation</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-white/80 border border-purple-100/80 shadow-2xs">
-              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-sm font-bold">
-                🧠
-              </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-slate-800">Cognitive Load</p>
-                <p className="text-[11px] text-slate-400">0–100 real-time score</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-white/80 border border-pink-100/80 shadow-2xs">
-              <div className="w-8 h-8 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center text-sm font-bold">
-                🛡️
-              </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-slate-800">Zero Data Loss</p>
-                <p className="text-[11px] text-slate-400">Session auto-persistence</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Financial Form Component */}
         <div className="max-w-2xl mx-auto space-y-5">
           <FinancialForm
             onValidationFriction={handleValidationFriction}
-            onFormChange={handleFormChange}
+            onFormChange={() => {}}
             onContextExtracted={handleContextExtracted}
             onSubmitSuccess={(data, context) => {
               setSubmittedData(data);
@@ -132,14 +150,14 @@ export default function App() {
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <p className="font-extrabold text-amber-900 text-xs uppercase tracking-wider">
-                    Cognitive Friction Detected
+                    Friction Signal Triggered
                   </p>
                   <span className="text-[10px] bg-amber-100 text-amber-800 font-mono px-2 py-0.5 rounded-full font-bold">
                     {lastValidationFriction.timestamp}
                   </span>
                 </div>
                 <p className="text-amber-900/90 mt-1 font-medium">
-                  Field: <code className="bg-white/90 text-amber-950 border border-amber-200 px-1.5 py-0.5 rounded font-mono font-bold">{lastValidationFriction.field}</code> — {lastValidationFriction.error}
+                  Target Field: <code className="bg-white/90 text-amber-950 border border-amber-200 px-1.5 py-0.5 rounded font-mono font-bold">{lastValidationFriction.field}</code> — {lastValidationFriction.error}
                 </p>
               </div>
             </div>
