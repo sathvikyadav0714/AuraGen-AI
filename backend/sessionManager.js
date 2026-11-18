@@ -24,6 +24,21 @@ function getSession(sessionId) {
     return sessions.get(sessionId);
 }
 
+function updateFormData(sessionId, newFormData) {
+    const session = sessions.get(sessionId);
+
+    if (!session) {
+        return null;
+    }
+
+    session.formData = {
+        ...session.formData,
+        ...newFormData
+    };
+
+    return session.formData;
+}
+
 // Add telemetry event to a user session
 function addTelemetryEvent(sessionId, event) {
     const session = sessions.get(sessionId);
@@ -49,5 +64,6 @@ function addTelemetryEvent(sessionId, event) {
 module.exports = {
     createSession,
     getSession,
-    addTelemetryEvent
+    addTelemetryEvent,
+    updateFormData
 };

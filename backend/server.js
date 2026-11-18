@@ -8,7 +8,8 @@ const { evaluateFriction } = require("./frictionMonitor");
 const {
     createSession,
     getSession,
-    addTelemetryEvent
+    addTelemetryEvent,
+    updateFormData
 } = require("./sessionManager");
 
 const app = express();
@@ -148,6 +149,59 @@ app.get("/api/sessions/:sessionId/telemetry/summary", (req, res) => {
         success: true,
         message: "Telemetry summary retrieved successfully",
         data: summary
+    });
+});
+
+
+// Save or update user form data
+app.patch("/api/sessions/:sessionId/form", (req, res) => {
+    const formData = req.body;
+
+    if (
+        !formData ||
+        typeof formData !== "object" ||
+        Array.isArray(formData) ||
+        Object.keys(formData).length === 0
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: "Valid form data is required"
+        });
+    }
+
+    const updatedData = updateFormData(
+        req.params.sessionId,
+        formData
+    );
+
+    if (!updatedData) {
+        return res.status(404).json({
+            success: false,
+            message: "Session not found"
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Form data saved successfully",
+        data: updatedData
+    });
+});
+
+// Retrieve saved user form data
+app.get("/api/sessions/:sessionId/form", (req, res) => {
+    const session = getSession(req.params.sessionId);
+
+    if (!session) {
+        return res.status(404).json({
+            success: false,
+            message: "Session not found"
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        data: session.formData
     });
 });
 
