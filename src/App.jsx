@@ -90,9 +90,12 @@ export default function App() {
             <span className="font-bold text-slate-800">useTelemetry Hook Active:</span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 font-mono text-[11px]">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-mono text-[11px]">
             <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
-              🖱️ Velocity: <strong className="text-indigo-600">{telemetry.cursorVelocity}</strong> px/ms
+              🖱️ Velocity: <strong className="text-indigo-600">{telemetry.cursorVelocity}</strong> px/ms (Avg: <strong className="text-indigo-500">{telemetry.averageVelocity}</strong>, Peak: <strong className="text-purple-600">{telemetry.peakVelocity}</strong>)
+            </span>
+            <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
+              🧭 Trajectory: <strong className={`${telemetry.pathEfficiency > 60 ? 'text-emerald-600' : 'text-amber-600'}`}>{telemetry.pathEfficiency}%</strong>
             </span>
             <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
               🎯 Clicks: <strong className="text-slate-900">{telemetry.totalClickCount}</strong>

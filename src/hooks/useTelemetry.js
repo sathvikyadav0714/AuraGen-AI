@@ -3,13 +3,22 @@ import {
   TELEMETRY_CONFIG,
   calculateDistance,
   calculateVelocity,
+  calculateAcceleration,
+  calculateMovingAverage,
+  calculatePathEfficiency,
+  calculateErraticScore,
   getSafeElementId
 } from '../utils/telemetry';
 
 const INITIAL_TELEMETRY_STATE = {
-  // Movement & Velocity
-  cursorVelocity: 0,           // px/ms
-  totalDistanceMoved: 0,       // px
+  // Kinematics & Velocity
+  cursorVelocity: 0,           // Instantaneous velocity (px/ms)
+  averageVelocity: 0,          // Rolling average velocity (px/ms)
+  peakVelocity: 0,             // Maximum session velocity (px/ms)
+  cursorAcceleration: 0,       // Acceleration (px/ms^2)
+  totalDistanceMoved: 0,       // Total pixels traversed
+  pathEfficiency: 100,         // Trajectory efficiency (0–100%)
+  erraticMovementScore: 0,     // Sharp direction reversal score (0–100)
   movementEventCount: 0,
 
   // Clicks & Rage Clicks
@@ -43,18 +52,24 @@ export default function useTelemetry(options = {}) {
   const { enabled = true, onFrictionEvent } = options;
 
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY_STATE);
-  const [isTracking, setIsTracking] = useState(enabled);
+  const [isTracking] = useState(enabled);
 
-  // Performance Refs (prevent high-frequency re-renders on mousemove)
+  // Performance Refs (prevents high-frequency re-renders on mousemove)
   const sessionStartTimeRef = useRef(Date.now());
   const lastActivityTimeRef = useRef(Date.now());
   const isInactiveRef = useRef(false);
   const accumulatedInactivityMsRef = useRef(0);
 
-  // Movement Tracking Refs
+  // Kinematic Movement Tracking Refs
   const lastMousePosRef = useRef({ x: 0, y: 0, time: Date.now() });
+  const startTrajectoryPosRef = useRef({ x: 0, y: 0, time: Date.now() });
   const totalDistanceRef = useRef(0);
   const currentVelocityRef = useRef(0);
+  const previousVelocityRef = useRef(0);
+  const peakVelocityRef = useRef(0);
+  const accelerationRef = useRef(0);
+  const velocityBufferRef = useRef([]); // Rolling velocity samples for moving average
+  const trajectoryPointsRef = useRef([]); // Recent points for erratic turn analysis
   const movementEventsRef = useRef(0);
 
   // Click & Rage Click Tracking Refs
@@ -73,7 +88,7 @@ export default function useTelemetry(options = {}) {
   const validationErrorsCountRef = useRef(0);
   const validationErrorFieldsRef = useRef({});
 
-  // 1. Mouse Movement Listener (Throttled)
+  // 1. Mouse Movement & Kinematic Listener (Throttled)
   const handleMouseMove = useCallback((e) => {
     const now = Date.now();
     lastActivityTimeRef.current = now;
@@ -87,14 +102,46 @@ export default function useTelemetry(options = {}) {
     if (timeDelta >= TELEMETRY_CONFIG.SAMPLE_INTERVAL_MS) {
       const distance = calculateDistance(last.x, last.y, e.clientX, e.clientY);
       const velocity = calculateVelocity(distance, timeDelta);
+      const acceleration = calculateAcceleration(velocity, previousVelocityRef.current, timeDelta);
 
       totalDistanceRef.current += Math.round(distance);
+      previousVelocityRef.current = currentVelocityRef.current;
       currentVelocityRef.current = velocity;
+      accelerationRef.current = acceleration;
       movementEventsRef.current += 1;
+
+      // Update peak velocity
+      if (velocity > peakVelocityRef.current) {
+        peakVelocityRef.current = velocity;
+      }
+
+      // Rolling velocity buffer for moving average
+      velocityBufferRef.current.push(velocity);
+      if (velocityBufferRef.current.length > TELEMETRY_CONFIG.VELOCITY_BUFFER_SIZE) {
+        velocityBufferRef.current.shift();
+      }
+
+      // Rolling trajectory buffer for erratic direction analysis (last 12 points)
+      trajectoryPointsRef.current.push({ x: e.clientX, y: e.clientY, time: now });
+      if (trajectoryPointsRef.current.length > 12) {
+        trajectoryPointsRef.current.shift();
+      }
+
+      // Trigger friction event on erratic sudden acceleration jerks
+      if (Math.abs(acceleration) >= TELEMETRY_CONFIG.ERRATIC_ACCELERATION_THRESHOLD) {
+        if (onFrictionEvent) {
+          onFrictionEvent({
+            type: 'erratic_movement',
+            acceleration,
+            velocity,
+            timestamp: now
+          });
+        }
+      }
 
       lastMousePosRef.current = { x: e.clientX, y: e.clientY, time: now };
     }
-  }, []);
+  }, [onFrictionEvent]);
 
   // 2. Click & Rage Click Listener
   const handleClick = useCallback((e) => {
@@ -156,7 +203,7 @@ export default function useTelemetry(options = {}) {
       const field = activeFocusFieldRef.current;
       const hesitation = now - focusStartTimeRef.current;
 
-      // Record hesitation if not already recorded for this field visit
+      // Record hesitation if threshold exceeded
       if (hesitation >= TELEMETRY_CONFIG.FIELD_HESITATION_THRESHOLD_MS) {
         hesitationEventsCountRef.current += 1;
         fieldHesitationsRef.current = {
@@ -206,6 +253,11 @@ export default function useTelemetry(options = {}) {
 
     totalDistanceRef.current = 0;
     currentVelocityRef.current = 0;
+    previousVelocityRef.current = 0;
+    peakVelocityRef.current = 0;
+    accelerationRef.current = 0;
+    velocityBufferRef.current = [];
+    trajectoryPointsRef.current = [];
     movementEventsRef.current = 0;
 
     totalClicksRef.current = 0;
@@ -228,7 +280,7 @@ export default function useTelemetry(options = {}) {
   useEffect(() => {
     if (!enabled) return;
 
-    // Attach passive window listeners for high performance
+    // Attach passive window listeners for high performance (60fps)
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     window.addEventListener('click', handleClick, { passive: true });
     window.addEventListener('focusin', handleFocusIn, { passive: true });
@@ -247,10 +299,24 @@ export default function useTelemetry(options = {}) {
         accumulatedInactivityMsRef.current += TELEMETRY_CONFIG.SNAPSHOT_INTERVAL_MS;
       }
 
-      // Update state snapshot for React components (Dashboard / Score)
+      // Calculate kinematic moving averages & path efficiency
+      const avgVelocity = calculateMovingAverage(velocityBufferRef.current);
+      const efficiency = calculatePathEfficiency(
+        startTrajectoryPosRef.current,
+        lastMousePosRef.current,
+        totalDistanceRef.current
+      );
+      const erraticScore = calculateErraticScore(trajectoryPointsRef.current);
+
+      // Update state snapshot for React components
       setTelemetry({
         cursorVelocity: currentVelocityRef.current,
+        averageVelocity: avgVelocity,
+        peakVelocity: peakVelocityRef.current,
+        cursorAcceleration: accelerationRef.current,
         totalDistanceMoved: totalDistanceRef.current,
+        pathEfficiency: efficiency,
+        erraticMovementScore: erraticScore,
         movementEventCount: movementEventsRef.current,
         totalClickCount: totalClicksRef.current,
         rageClickCount: rageClicksCountRef.current,
