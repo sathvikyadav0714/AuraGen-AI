@@ -49,7 +49,12 @@ const DEMO_SCHEMA = {
 
 export default function AuraGenPage() {
   const [mode, setMode] = useState('original')
-  const [preservedFormData, setPreservedFormData] = useState({})
+  const [preservedFormData, setPreservedFormData] = useState({
+    fullName: 'Rahul Verma',
+    email: 'rahul.verma@example.com',
+    annualIncome: '750000',
+    loanAmount: '250000',
+  })
   const [uiSchema, setUiSchema] = useState(null)
   const [cognitiveScore, setCognitiveScore] = useState(0)
   const [demoMode, setDemoMode] = useState(true)
@@ -77,6 +82,16 @@ export default function AuraGenPage() {
   useEffect(() => {
     setDemoMode(!isConnected)
   }, [isConnected])
+
+  // Trigger transformation with preserved data
+  const handleTriggerTransformation = useCallback((simulatedScore = 85) => {
+    setCognitiveScore(simulatedScore)
+    setMode('loading')
+    setTimeout(() => {
+      setUiSchema(DEMO_SCHEMA)
+      setMode('wizard')
+    }, 1600)
+  }, [])
 
   return (
     <div className="min-h-screen bg-[#f8f9fb] text-gray-800 flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
@@ -109,15 +124,9 @@ export default function AuraGenPage() {
             </div>
 
             {/* Demo trigger button */}
-            {!isConnected && mode === 'original' && (
+            {mode === 'original' && (
               <button
-                onClick={() => {
-                  setMode('loading')
-                  setTimeout(() => {
-                    setUiSchema(DEMO_SCHEMA)
-                    setMode('wizard')
-                  }, 1800)
-                }}
+                onClick={() => handleTriggerTransformation(88)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50/30 text-xs font-medium shadow-sm transition-all duration-200"
               >
                 <span>✨</span>
@@ -133,43 +142,91 @@ export default function AuraGenPage() {
         <TransitionManager mode={mode} cognitiveScore={cognitiveScore}>
           <AnimatePresence mode="wait">
             {mode === 'original' && (
-              <div key="original" className="max-w-xl mx-auto">
-                <div className="card text-center py-14 px-8 border border-gray-100/80 shadow-[0_4px_24px_rgba(0,0,0,0.03)] rounded-3xl bg-white">
-                  <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-blue-50 border border-blue-100/80 flex items-center justify-center text-2xl shadow-inner">
-                    📋
-                  </div>
-                  <h1 className="text-xl font-bold text-gray-900 tracking-tight mb-2">
-                    Standard Financial Application
-                  </h1>
-                  <p className="text-sm text-gray-500 max-w-sm mx-auto mb-8 leading-relaxed">
-                    Member 1's friction-monitored form component mounts here. Telemetry tracking will measure cognitive load in real-time.
-                  </p>
-
-                  <div className="p-4 rounded-2xl bg-gray-50/70 border border-gray-100 text-left mb-6">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-semibold text-gray-700">Preview Transformation</span>
-                      <span className="text-[10px] font-medium bg-white text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded">Demo</span>
+              <div key="original" className="max-w-xl mx-auto space-y-4">
+                {/* Interactive Original Form for Testing Data Preservation */}
+                <div className="card py-8 px-8 border border-gray-100/80 shadow-[0_4px_24px_rgba(0,0,0,0.03)] rounded-3xl bg-white">
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xl">📋</span>
+                      <div>
+                        <h1 className="text-base font-bold text-gray-900 tracking-tight">
+                          Original Financial Form
+                        </h1>
+                        <p className="text-[11px] text-gray-400">
+                          Pre-fill data below to test automatic state preservation
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500 leading-normal mb-3">
-                      Trigger the automated transformation to see AuraGen self-heal this form into a clean conversational wizard.
+                    <span className="text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
+                      Member 1 Mock
+                    </span>
+                  </div>
+
+                  <div className="space-y-3.5 mb-6 text-left">
+                    <div>
+                      <label className="label-text">Full Name</label>
+                      <input
+                        type="text"
+                        className="input-field"
+                        value={preservedFormData.fullName || ''}
+                        onChange={(e) => setPreservedFormData(p => ({ ...p, fullName: e.target.value }))}
+                        placeholder="e.g. Rahul Verma"
+                      />
+                    </div>
+                    <div>
+                      <label className="label-text">Email Address</label>
+                      <input
+                        type="email"
+                        className="input-field"
+                        value={preservedFormData.email || ''}
+                        onChange={(e) => setPreservedFormData(p => ({ ...p, email: e.target.value }))}
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="label-text">Annual Income (₹)</label>
+                        <input
+                          type="number"
+                          className="input-field"
+                          value={preservedFormData.annualIncome || ''}
+                          onChange={(e) => setPreservedFormData(p => ({ ...p, annualIncome: e.target.value }))}
+                          placeholder="750000"
+                        />
+                      </div>
+                      <div>
+                        <label className="label-text">Loan Amount (₹)</label>
+                        <input
+                          type="number"
+                          className="input-field"
+                          value={preservedFormData.loanAmount || ''}
+                          onChange={(e) => setPreservedFormData(p => ({ ...p, loanAmount: e.target.value }))}
+                          placeholder="250000"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trigger Transformation Card */}
+                  <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 text-left">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-semibold text-blue-900">
+                        Cognitive Friction Trigger
+                      </span>
+                      <span className="text-[10px] font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                        Score: 88/100
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-700 leading-normal mb-3">
+                      Simulate high user cognitive load to transform this form into Member 4's dynamic conversational wizard.
                     </p>
                     <button
-                      onClick={() => {
-                        setMode('loading')
-                        setTimeout(() => {
-                          setUiSchema(DEMO_SCHEMA)
-                          setMode('wizard')
-                        }, 1800)
-                      }}
+                      onClick={() => handleTriggerTransformation(88)}
                       className="btn-primary w-full text-xs py-2.5"
                     >
                       Trigger UI Self-Healing →
                     </button>
                   </div>
-
-                  <p className="text-[11px] text-gray-400">
-                    AST validation & allowed component registry active.
-                  </p>
                 </div>
               </div>
             )}
@@ -182,11 +239,12 @@ export default function AuraGenPage() {
                   preservedData={preservedFormData}
                   onComplete={(data) => {
                     console.log('Form completed:', data)
-                    alert('Application successfully submitted!\n\nData:\n' + JSON.stringify(data, null, 2))
+                    alert('Application successfully submitted!\n\nPreserved & Submitted Data:\n' + JSON.stringify(data, null, 2))
                   }}
                   onCancel={() => {
                     setMode('original')
                     setUiSchema(null)
+                    setCognitiveScore(0)
                   }}
                 />
               </div>
