@@ -1,6 +1,8 @@
 
+import { ALLOWED_UI_COMPONENTS } from "./designSystem.js";
+
 export function validateAIResponse(response) {
-    // Check whether response is provided
+    // Step 1: Check whether response is provided
     if (!response || typeof response !== "string") {
         return {
             valid: false,
@@ -9,10 +11,10 @@ export function validateAIResponse(response) {
     }
 
     try {
-        // Convert JSON string into JavaScript object
+        // Step 2: Parse JSON response
         const parsedResponse = JSON.parse(response);
 
-        // Ensure response is a JSON object
+        // Step 3: Ensure response is a JSON object
         if (
             typeof parsedResponse !== "object" ||
             parsedResponse === null ||
@@ -21,7 +23,7 @@ export function validateAIResponse(response) {
             throw new Error("AI response must be a JSON object.");
         }
 
-        // Check required fields and expected data types
+        // Step 4: Validate required fields
         const requiredFields = {
             title: "string",
             steps: "array",
@@ -45,14 +47,75 @@ export function validateAIResponse(response) {
             }
         }
 
-        // Validate progress range
+        // Step 5: Validate title
+        if (parsedResponse.title.trim() === "") {
+            throw new Error("Title cannot be empty.");
+        }
+
+        // Step 6: Validate individual UI steps
+        for (const step of parsedResponse.steps) {
+            if (
+                typeof step !== "object" ||
+                step === null ||
+                Array.isArray(step)
+            ) {
+                throw new Error("Each step must be an object.");
+            }
+
+            if (
+                typeof step.question !== "string" ||
+                step.question.trim() === ""
+            ) {
+                throw new Error(
+                    "Each step must have a valid question."
+                );
+            }
+
+            if (
+                typeof step.component !== "string" ||
+                step.component.trim() === ""
+            ) {
+                throw new Error(
+                    "Each step must have a valid component."
+                );
+            }
+
+            // Check approved UI components
+            if (
+                !Object.prototype.hasOwnProperty.call(
+                    ALLOWED_UI_COMPONENTS,
+                    step.component
+                )
+            ) {
+                throw new Error(
+                    `Unsupported UI component: ${step.component}`
+                );
+            }
+        }
+
+        // Step 7: Validate navigation
         if (
+            !parsedResponse.navigation.every(
+                item => typeof item === "string" && item.trim() !== ""
+            )
+        ) {
+            throw new Error(
+                "Navigation must contain non-empty strings."
+            );
+        }
+
+        // Step 8: Validate progress
+        if (
+            !Number.isFinite(parsedResponse.progress) ||
             parsedResponse.progress < 0 ||
             parsedResponse.progress > 100
         ) {
-            throw new Error("Progress must be between 0 and 100.");
+            throw new Error(
+                "Progress must be a number between 0 and 100."
+            );
         }
 
+        // Step 9: Return successful validation
         return {
             valid: true,
             data: parsedResponse
@@ -65,4 +128,3 @@ export function validateAIResponse(response) {
         };
     }
 }
-
