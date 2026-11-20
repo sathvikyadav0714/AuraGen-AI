@@ -237,6 +237,7 @@ export default function AuraGenPage() {
                   uiSchema={mode === 'wizard' ? uiSchema : null}
                   isLoading={mode === 'loading'}
                   preservedData={preservedFormData}
+                  onStateChange={(updatedData) => setPreservedFormData(prev => ({ ...prev, ...updatedData }))}
                   onComplete={(data) => {
                     console.log('Form completed:', data)
                     alert('Application successfully submitted!\n\nPreserved & Submitted Data:\n' + JSON.stringify(data, null, 2))

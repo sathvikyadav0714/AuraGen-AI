@@ -9,7 +9,7 @@ const variants = {
 }
 const transition = { duration: 0.28, ease: [0.4, 0, 0.2, 1] }
 
-export default function FormWizard({ schema, preservedData, onComplete, onCancel }) {
+export default function FormWizard({ schema, preservedData, onComplete, onCancel, onStateChange }) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [formData, setFormData]   = useState(() => ({ ...(preservedData || {}) }))
   const [stepErrors, setStepErrors] = useState({})
@@ -34,12 +34,16 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
   }, [currentStepIndex])
 
   const handleFieldChange = useCallback((name, value) => {
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData(prev => {
+      const next = { ...prev, [name]: value }
+      if (onStateChange) onStateChange(next)
+      return next
+    })
     setStepErrors(prev => {
       if (!prev[name]) return prev
       const next = { ...prev }; delete next[name]; return next
     })
-  }, [])
+  }, [onStateChange])
 
   const validateCurrentStep = useCallback(() => {
     const errors = {}

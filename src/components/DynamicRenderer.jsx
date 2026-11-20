@@ -41,6 +41,7 @@ const DynamicRenderer = ({
   preservedData,
   onComplete,
   onCancel,
+  onStateChange,
   isLoading,
 }) => {
   const [validationResult, setValidationResult] = useState({ valid: null, errors: [] })
@@ -132,6 +133,7 @@ const DynamicRenderer = ({
           preservedData={preservedData}
           onComplete={onComplete}
           onCancel={onCancel}
+          onStateChange={onStateChange}
         />
       )
     }
