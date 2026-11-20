@@ -20,7 +20,25 @@ export default function App() {
       } else if (event.type === 'hesitation') {
         setLastValidationFriction({
           field: event.target,
-          error: `High Hesitation Detected (${formatDuration(event.durationMs)} before typing)`,
+          error: `Input Hesitation Detected (${formatDuration(event.durationMs)} delay before typing)`,
+          timestamp: new Date().toLocaleTimeString()
+        });
+      } else if (event.type === 'hesitation_abandoned') {
+        setLastValidationFriction({
+          field: event.target,
+          error: `Field Hesitation & Abandonment (${formatDuration(event.durationMs)} hesitation then blurred)`,
+          timestamp: new Date().toLocaleTimeString()
+        });
+      } else if (event.type === 'inactivity_started') {
+        setLastValidationFriction({
+          field: 'User Session',
+          error: `Inactivity Detected (User paused for ${formatDuration(event.idleDurationMs)})`,
+          timestamp: new Date().toLocaleTimeString()
+        });
+      } else if (event.type === 'inactivity_ended') {
+        setLastValidationFriction({
+          field: 'User Session',
+          error: `Activity Resumed after ${formatDuration(event.pauseDurationMs)} pause`,
           timestamp: new Date().toLocaleTimeString()
         });
       }
@@ -68,9 +86,13 @@ export default function App() {
 
           <div className="flex items-center gap-3">
             {/* Live Telemetry Status Pill */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-semibold text-indigo-700 shadow-2xs">
-              <span className={`w-2 h-2 rounded-full ${telemetry.isCurrentlyInactive ? 'bg-amber-400' : 'bg-indigo-500 animate-pulse'}`} />
-              <span>{telemetry.isCurrentlyInactive ? 'Idle (Inactivity)' : 'Telemetry Live'}</span>
+            <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shadow-2xs border ${telemetry.isCurrentlyInactive ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-indigo-50 border-indigo-200 text-indigo-700'}`}>
+              <span className={`w-2 h-2 rounded-full ${telemetry.isCurrentlyInactive ? 'bg-amber-500 animate-ping' : 'bg-indigo-500 animate-pulse'}`} />
+              <span>
+                {telemetry.isCurrentlyInactive
+                  ? `Idle (${formatDuration(telemetry.currentInactivityDurationMs)})`
+                  : 'Telemetry Live'}
+              </span>
             </div>
 
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 shadow-2xs">
@@ -83,11 +105,11 @@ export default function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        {/* Live Behavioral Telemetry Mini-Bar (Day 6 Deliverable) */}
+        {/* Live Behavioral Telemetry Mini-Bar (Day 8 Deliverable) */}
         <div className="mb-6 p-3 sm:p-4 bg-white/90 backdrop-blur-md rounded-2xl border border-indigo-100 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-            <span className="font-bold text-slate-800">useTelemetry Hook Active:</span>
+            <span className={`w-2.5 h-2.5 rounded-full ${telemetry.isCurrentlyInactive ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500 animate-ping'}`} />
+            <span className="font-bold text-slate-800">useTelemetry Engine:</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-mono text-[11px]">
@@ -95,16 +117,22 @@ export default function App() {
               🖱️ Velocity: <strong className="text-indigo-600">{telemetry.cursorVelocity}</strong> px/ms (Avg: <strong className="text-indigo-500">{telemetry.averageVelocity}</strong>, Peak: <strong className="text-purple-600">{telemetry.peakVelocity}</strong>)
             </span>
             <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
-              🧭 Trajectory: <strong className={`${telemetry.pathEfficiency > 60 ? 'text-emerald-600' : 'text-amber-600'}`}>{telemetry.pathEfficiency}%</strong>
+              🧭 Path: <strong className={`${telemetry.pathEfficiency > 60 ? 'text-emerald-600' : 'text-amber-600'}`}>{telemetry.pathEfficiency}%</strong>
+            </span>
+            <span className={`px-2 py-1 rounded-md ${telemetry.hesitationEventsCount > 0 ? 'bg-amber-100 text-amber-900 font-bold' : 'bg-slate-100 text-slate-700'}`}>
+              🤔 Hesitations: <strong>{telemetry.hesitationEventsCount}</strong> (Index: <strong className="text-amber-700">{telemetry.hesitationIndex}</strong>)
+            </span>
+            <span className={`px-2 py-1 rounded-md ${telemetry.isCurrentlyInactive ? 'bg-amber-200 text-amber-900 font-bold' : 'bg-slate-100 text-slate-700'}`}>
+              ⏳ Inactivity: <strong className="text-amber-700">{formatDuration(telemetry.totalInactivityDurationMs)}</strong>
+              {telemetry.isCurrentlyInactive && (
+                <span className="ml-1 text-amber-900">({formatDuration(telemetry.currentInactivityDurationMs)} pause)</span>
+              )}
             </span>
             <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
               🎯 Clicks: <strong className="text-slate-900">{telemetry.totalClickCount}</strong>
             </span>
             <span className={`px-2 py-1 rounded-md ${telemetry.rageClickCount > 0 ? 'bg-rose-100 text-rose-800 font-bold' : 'bg-slate-100 text-slate-700'}`}>
-              ⚡ Rage Clicks: <strong>{telemetry.rageClickCount}</strong>
-            </span>
-            <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
-              ⏳ Inactivity: <strong className="text-amber-600">{formatDuration(telemetry.totalInactivityDurationMs)}</strong>
+              ⚡ Rage: <strong>{telemetry.rageClickCount}</strong>
             </span>
             <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
               🛑 Errors: <strong className="text-rose-600">{telemetry.validationErrorCount}</strong>

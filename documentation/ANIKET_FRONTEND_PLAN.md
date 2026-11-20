@@ -30,9 +30,9 @@ In the AuraGen project, Member 1 is responsible for the user-facing entry point 
 - [ ] Day 5: Week 1 Code Review, Documentation & Form Polish
 
 ### Week 2: Telemetry & Friction Detection (Days 6–10)
-- [ ] Day 6: `useTelemetry` Hook Setup & Event Listener Architecture
-- [ ] Day 7: Cursor Velocity & Distance Calculation
-- [ ] Day 8: Inactivity & Hesitation Detection
+- [x] Day 6: `useTelemetry` Hook Setup & Event Listener Architecture
+- [x] Day 7: Cursor Velocity & Distance Calculation
+- [x] Day 8: Inactivity & Hesitation Detection
 - [ ] Day 9: Rage Click & Rapid Interaction Detection
 - [ ] Day 10: Repeated Validation Error Tracking & State Aggregation
 

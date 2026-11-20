@@ -7,6 +7,9 @@ import {
   calculateMovingAverage,
   calculatePathEfficiency,
   calculateErraticScore,
+  isFieldHesitant,
+  calculateHesitationIndex,
+  analyzeInactivityPattern,
   getSafeElementId
 } from '../utils/telemetry';
 
@@ -26,11 +29,23 @@ const INITIAL_TELEMETRY_STATE = {
   rageClickCount: 0,
   lastClickedElement: null,
 
-  // Hesitation & Inactivity
+  // Hesitation & Inactivity (Day 8 Deliverables)
   isCurrentlyInactive: false,
+  currentInactivityDurationMs: 0,
   totalInactivityDurationMs: 0,
+  inactivityPeriodsCount: 0,
+  longestInactivityPeriodMs: 0,
+  idleAnalysis: {
+    idleRatio: 0,
+    severity: 'normal',
+    isExcessive: false,
+    averageIdlePeriodMs: 0
+  },
   hesitationEventsCount: 0,
-  fieldHesitations: {},        // { [field]: durationMs before first typing }
+  hesitationIndex: 0,          // Aggregate penalty score (0–100)
+  fieldHesitations: {},        // { [field]: { totalDurationMs, count, abandonedCount, lastDurationMs } }
+  activeFocusField: null,
+  currentFocusDurationMs: 0,
 
   // Validation Errors
   validationErrorCount: 0,
@@ -44,9 +59,16 @@ const INITIAL_TELEMETRY_STATE = {
 /**
  * Custom React Hook for Non-Invasive Behavioral Telemetry & Cognitive Friction Tracking
  * 
+ * Features:
+ * - Real-time inactivity & pause detection
+ * - Field-level focus hesitation and abandonment measurement
+ * - Cursor kinematics (velocity, acceleration, erratic path trajectory)
+ * - Rage-click burst monitoring
+ * - Non-PII privacy guarantee (only element metadata, never values)
+ * 
  * @param {Object} [options]
  * @param {boolean} [options.enabled=true] - Whether tracking is active
- * @param {Function} [options.onFrictionEvent] - Callback triggered when significant friction is detected
+ * @param {Function} [options.onFrictionEvent] - Callback triggered when friction is detected
  */
 export default function useTelemetry(options = {}) {
   const { enabled = true, onFrictionEvent } = options;
@@ -54,11 +76,14 @@ export default function useTelemetry(options = {}) {
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY_STATE);
   const [isTracking] = useState(enabled);
 
-  // Performance Refs (prevents high-frequency re-renders on mousemove)
+  // Performance Refs
   const sessionStartTimeRef = useRef(Date.now());
   const lastActivityTimeRef = useRef(Date.now());
   const isInactiveRef = useRef(false);
   const accumulatedInactivityMsRef = useRef(0);
+  const currentInactivityMsRef = useRef(0);
+  const inactivityPeriodsCountRef = useRef(0);
+  const longestInactivityPeriodMsRef = useRef(0);
 
   // Kinematic Movement Tracking Refs
   const lastMousePosRef = useRef({ x: 0, y: 0, time: Date.now() });
@@ -88,13 +113,31 @@ export default function useTelemetry(options = {}) {
   const validationErrorsCountRef = useRef(0);
   const validationErrorFieldsRef = useRef({});
 
+  // Helper: Register User Activity & Handle Resumption from Inactivity
+  const registerUserActivity = useCallback((now) => {
+    if (isInactiveRef.current) {
+      const pauseDuration = now - lastActivityTimeRef.current;
+      if (pauseDuration > longestInactivityPeriodMsRef.current) {
+        longestInactivityPeriodMsRef.current = pauseDuration;
+      }
+      isInactiveRef.current = false;
+      currentInactivityMsRef.current = 0;
+
+      if (onFrictionEvent) {
+        onFrictionEvent({
+          type: 'inactivity_ended',
+          pauseDurationMs: pauseDuration,
+          timestamp: now
+        });
+      }
+    }
+    lastActivityTimeRef.current = now;
+  }, [onFrictionEvent]);
+
   // 1. Mouse Movement & Kinematic Listener (Throttled)
   const handleMouseMove = useCallback((e) => {
     const now = Date.now();
-    lastActivityTimeRef.current = now;
-    if (isInactiveRef.current) {
-      isInactiveRef.current = false;
-    }
+    registerUserActivity(now);
 
     const last = lastMousePosRef.current;
     const timeDelta = now - last.time;
@@ -141,12 +184,12 @@ export default function useTelemetry(options = {}) {
 
       lastMousePosRef.current = { x: e.clientX, y: e.clientY, time: now };
     }
-  }, [onFrictionEvent]);
+  }, [onFrictionEvent, registerUserActivity]);
 
   // 2. Click & Rage Click Listener
   const handleClick = useCallback((e) => {
     const now = Date.now();
-    lastActivityTimeRef.current = now;
+    registerUserActivity(now);
     totalClicksRef.current += 1;
 
     const safeTarget = getSafeElementId(e.target);
@@ -184,19 +227,69 @@ export default function useTelemetry(options = {}) {
         }
       }
     }
-  }, [onFrictionEvent]);
+  }, [onFrictionEvent, registerUserActivity]);
 
-  // 3. Focus and Hesitation Tracking Listeners
+  // 3. Scroll Listener
+  const handleScroll = useCallback(() => {
+    registerUserActivity(Date.now());
+  }, [registerUserActivity]);
+
+  // 4. Focus, Hesitation and Abandonment Listeners
   const handleFocusIn = useCallback((e) => {
+    const now = Date.now();
+    registerUserActivity(now);
+
     const fieldId = getSafeElementId(e.target);
     activeFocusFieldRef.current = fieldId;
-    focusStartTimeRef.current = Date.now();
-    lastActivityTimeRef.current = Date.now();
-  }, []);
+    focusStartTimeRef.current = now;
+  }, [registerUserActivity]);
+
+  const handleFocusOut = useCallback((e) => {
+    const now = Date.now();
+    registerUserActivity(now);
+
+    // If user focused on a field and left without typing, check abandonment delay
+    if (activeFocusFieldRef.current && focusStartTimeRef.current) {
+      const field = activeFocusFieldRef.current;
+      const abandonmentDelay = now - focusStartTimeRef.current;
+
+      if (isFieldHesitant(abandonmentDelay, TELEMETRY_CONFIG.FIELD_HESITATION_THRESHOLD_MS)) {
+        hesitationEventsCountRef.current += 1;
+        const currentStats = fieldHesitationsRef.current[field] || {
+          totalDurationMs: 0,
+          count: 0,
+          abandonedCount: 0,
+          lastDurationMs: 0
+        };
+
+        fieldHesitationsRef.current = {
+          ...fieldHesitationsRef.current,
+          [field]: {
+            totalDurationMs: currentStats.totalDurationMs + abandonmentDelay,
+            count: currentStats.count + 1,
+            abandonedCount: currentStats.abandonedCount + 1,
+            lastDurationMs: abandonmentDelay
+          }
+        };
+
+        if (onFrictionEvent) {
+          onFrictionEvent({
+            type: 'hesitation_abandoned',
+            target: field,
+            durationMs: abandonmentDelay,
+            timestamp: now
+          });
+        }
+      }
+    }
+
+    activeFocusFieldRef.current = null;
+    focusStartTimeRef.current = null;
+  }, [onFrictionEvent, registerUserActivity]);
 
   const handleKeyDown = useCallback((e) => {
     const now = Date.now();
-    lastActivityTimeRef.current = now;
+    registerUserActivity(now);
 
     // Check hesitation before first keystroke in the currently focused field
     if (activeFocusFieldRef.current && focusStartTimeRef.current) {
@@ -204,11 +297,23 @@ export default function useTelemetry(options = {}) {
       const hesitation = now - focusStartTimeRef.current;
 
       // Record hesitation if threshold exceeded
-      if (hesitation >= TELEMETRY_CONFIG.FIELD_HESITATION_THRESHOLD_MS) {
+      if (isFieldHesitant(hesitation, TELEMETRY_CONFIG.FIELD_HESITATION_THRESHOLD_MS)) {
         hesitationEventsCountRef.current += 1;
+        const currentStats = fieldHesitationsRef.current[field] || {
+          totalDurationMs: 0,
+          count: 0,
+          abandonedCount: 0,
+          lastDurationMs: 0
+        };
+
         fieldHesitationsRef.current = {
           ...fieldHesitationsRef.current,
-          [field]: (fieldHesitationsRef.current[field] || 0) + hesitation
+          [field]: {
+            totalDurationMs: currentStats.totalDurationMs + hesitation,
+            count: currentStats.count + 1,
+            abandonedCount: currentStats.abandonedCount,
+            lastDurationMs: hesitation
+          }
         };
 
         if (onFrictionEvent) {
@@ -221,12 +326,12 @@ export default function useTelemetry(options = {}) {
         }
       }
 
-      // Reset so subsequent typing in the same field focus does not count as hesitation
+      // Reset so subsequent typing in the same field focus does not re-trigger hesitation
       focusStartTimeRef.current = null;
     }
-  }, [onFrictionEvent]);
+  }, [onFrictionEvent, registerUserActivity]);
 
-  // 4. Record Form Validation Error (Callable externally)
+  // 5. Record Form Validation Error (Callable externally)
   const recordValidationError = useCallback((field, errorMessage) => {
     validationErrorsCountRef.current += 1;
     validationErrorFieldsRef.current = {
@@ -244,12 +349,16 @@ export default function useTelemetry(options = {}) {
     }
   }, [onFrictionEvent]);
 
-  // 5. Reset All Telemetry
+  // 6. Reset All Telemetry
   const resetTelemetry = useCallback(() => {
-    sessionStartTimeRef.current = Date.now();
-    lastActivityTimeRef.current = Date.now();
+    const now = Date.now();
+    sessionStartTimeRef.current = now;
+    lastActivityTimeRef.current = now;
     isInactiveRef.current = false;
     accumulatedInactivityMsRef.current = 0;
+    currentInactivityMsRef.current = 0;
+    inactivityPeriodsCountRef.current = 0;
+    longestInactivityPeriodMsRef.current = 0;
 
     totalDistanceRef.current = 0;
     currentVelocityRef.current = 0;
@@ -280,23 +389,37 @@ export default function useTelemetry(options = {}) {
   useEffect(() => {
     if (!enabled) return;
 
-    // Attach passive window listeners for high performance (60fps)
+    // Attach passive window listeners for high performance
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     window.addEventListener('click', handleClick, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('focusin', handleFocusIn, { passive: true });
+    window.addEventListener('focusout', handleFocusOut, { passive: true });
     window.addEventListener('keydown', handleKeyDown, { passive: true });
 
     // Periodic state snapshot timer (500ms)
     const snapshotInterval = setInterval(() => {
       const now = Date.now();
       const idleTime = now - lastActivityTimeRef.current;
+      const sessionDurationMs = now - sessionStartTimeRef.current;
 
       // Check inactivity
       if (idleTime >= TELEMETRY_CONFIG.INACTIVITY_THRESHOLD_MS) {
         if (!isInactiveRef.current) {
           isInactiveRef.current = true;
+          inactivityPeriodsCountRef.current += 1;
+          if (onFrictionEvent) {
+            onFrictionEvent({
+              type: 'inactivity_started',
+              idleDurationMs: idleTime,
+              timestamp: now
+            });
+          }
         }
+        currentInactivityMsRef.current = idleTime;
         accumulatedInactivityMsRef.current += TELEMETRY_CONFIG.SNAPSHOT_INTERVAL_MS;
+      } else {
+        currentInactivityMsRef.current = 0;
       }
 
       // Calculate kinematic moving averages & path efficiency
@@ -307,6 +430,17 @@ export default function useTelemetry(options = {}) {
         totalDistanceRef.current
       );
       const erraticScore = calculateErraticScore(trajectoryPointsRef.current);
+
+      // Hesitation index & Inactivity pattern analysis
+      const hesitationIndex = calculateHesitationIndex(fieldHesitationsRef.current);
+      const idleAnalysis = analyzeInactivityPattern(
+        accumulatedInactivityMsRef.current,
+        sessionDurationMs,
+        inactivityPeriodsCountRef.current
+      );
+
+      // Current focus duration (if currently dwelling inside a field)
+      const currentFocusDuration = focusStartTimeRef.current ? now - focusStartTimeRef.current : 0;
 
       // Update state snapshot for React components
       setTelemetry({
@@ -322,12 +456,19 @@ export default function useTelemetry(options = {}) {
         rageClickCount: rageClicksCountRef.current,
         lastClickedElement: lastClickedElementRef.current,
         isCurrentlyInactive: isInactiveRef.current,
+        currentInactivityDurationMs: currentInactivityMsRef.current,
         totalInactivityDurationMs: accumulatedInactivityMsRef.current,
+        inactivityPeriodsCount: inactivityPeriodsCountRef.current,
+        longestInactivityPeriodMs: longestInactivityPeriodMsRef.current,
+        idleAnalysis,
         hesitationEventsCount: hesitationEventsCountRef.current,
+        hesitationIndex,
         fieldHesitations: { ...fieldHesitationsRef.current },
+        activeFocusField: activeFocusFieldRef.current,
+        currentFocusDurationMs: currentFocusDuration,
         validationErrorCount: validationErrorsCountRef.current,
         validationErrorFields: { ...validationErrorFieldsRef.current },
-        sessionDurationMs: now - sessionStartTimeRef.current,
+        sessionDurationMs,
         lastActivityTimestamp: lastActivityTimeRef.current
       });
     }, TELEMETRY_CONFIG.SNAPSHOT_INTERVAL_MS);
@@ -336,11 +477,13 @@ export default function useTelemetry(options = {}) {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('click', handleClick);
+      window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('focusin', handleFocusIn);
+      window.removeEventListener('focusout', handleFocusOut);
       window.removeEventListener('keydown', handleKeyDown);
       clearInterval(snapshotInterval);
     };
-  }, [enabled, handleMouseMove, handleClick, handleFocusIn, handleKeyDown]);
+  }, [enabled, handleMouseMove, handleClick, handleScroll, handleFocusIn, handleFocusOut, handleKeyDown, onFrictionEvent]);
 
   return {
     telemetry,

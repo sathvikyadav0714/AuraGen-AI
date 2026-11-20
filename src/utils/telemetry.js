@@ -134,3 +134,92 @@ export function formatDuration(ms) {
   if (!ms || ms < 0) return '0.0s';
   return `${(ms / 1000).toFixed(1)}s`;
 }
+
+/**
+ * Evaluates whether a given focus duration qualifies as cognitive hesitation
+ */
+export function isFieldHesitant(focusDurationMs, thresholdMs = TELEMETRY_CONFIG.FIELD_HESITATION_THRESHOLD_MS) {
+  if (typeof focusDurationMs !== 'number' || focusDurationMs < 0) return false;
+  return focusDurationMs >= thresholdMs;
+}
+
+/**
+ * Calculates a normalized hesitation index (0–100) reflecting cognitive friction from input hesitation
+ * 
+ * @param {Object} fieldHesitations - Map of field names to duration or stat objects
+ * @returns {number} 0-100 score
+ */
+export function calculateHesitationIndex(fieldHesitations = {}) {
+  const fields = Object.keys(fieldHesitations);
+  if (!fields.length) return 0;
+
+  let totalHesitationMs = 0;
+  for (const field of fields) {
+    const val = fieldHesitations[field];
+    const duration = typeof val === 'number' ? val : (val?.totalDurationMs || 0);
+    totalHesitationMs += Math.max(0, duration);
+  }
+
+  // 10,000ms (10 seconds) of cumulative hesitation maps to a max friction penalty of 100
+  const score = Math.round((totalHesitationMs / 10000) * 100);
+  return Math.min(100, Math.max(0, score));
+}
+
+/**
+ * Produces a human-readable summary of hesitant fields sorted by delay duration
+ * 
+ * @param {Object} fieldHesitations 
+ * @returns {string} e.g. "loanAmount (3.2s), annualIncome (2.1s)" or "None"
+ */
+export function formatHesitationSummary(fieldHesitations = {}) {
+  const entries = Object.entries(fieldHesitations)
+    .map(([field, val]) => {
+      const duration = typeof val === 'number' ? val : (val?.totalDurationMs || 0);
+      return { field, duration };
+    })
+    .filter((item) => item.duration > 0)
+    .sort((a, b) => b.duration - a.duration);
+
+  if (!entries.length) return 'None';
+  return entries.map((e) => `${e.field} (${formatDuration(e.duration)})`).join(', ');
+}
+
+/**
+ * Evaluates user inactivity patterns across the session
+ * 
+ * @param {number} totalInactivityMs - Total accumulated idle time
+ * @param {number} sessionDurationMs - Total session duration
+ * @param {number} [inactivityPeriodsCount=0] - Number of distinct idle pauses
+ * @returns {{ idleRatio: number, severity: 'normal' | 'moderate' | 'high', isExcessive: boolean, averageIdlePeriodMs: number }}
+ */
+export function analyzeInactivityPattern(totalInactivityMs = 0, sessionDurationMs = 0, inactivityPeriodsCount = 0) {
+  if (sessionDurationMs <= 0 || totalInactivityMs <= 0) {
+    return {
+      idleRatio: 0,
+      severity: 'normal',
+      isExcessive: false,
+      averageIdlePeriodMs: 0
+    };
+  }
+
+  const idleRatio = Math.min(100, Math.round((totalInactivityMs / sessionDurationMs) * 100));
+  const averageIdlePeriodMs = inactivityPeriodsCount > 0 ? Math.round(totalInactivityMs / inactivityPeriodsCount) : totalInactivityMs;
+
+  let severity = 'normal';
+  let isExcessive = false;
+
+  if (idleRatio >= 50) {
+    severity = 'high';
+    isExcessive = true;
+  } else if (idleRatio >= 25) {
+    severity = 'moderate';
+    isExcessive = false;
+  }
+
+  return {
+    idleRatio,
+    severity,
+    isExcessive,
+    averageIdlePeriodMs
+  };
+}
