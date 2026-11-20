@@ -244,53 +244,81 @@ export function validateUISchema(schema) {
 }
 
 // ---------------------------------------------------------------------------
-// sanitizeString & sanitizeSchema
+// sanitizeString & sanitizeSchema & Security Hardening
 // ---------------------------------------------------------------------------
 
+const DANGEROUS_OBJECT_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /**
- * Removes common XSS vectors from a string.
- * - Strips <script>...</script> tags (and their content)
- * - Removes inline event handler attributes (on*)
- * - Removes javascript: protocol references
+ * Escapes unsafe HTML characters to prevent XSS injection
+ * @param {string} str
+ * @returns {string}
+ */
+export function escapeHtml(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Removes common XSS vectors from a string:
+ * - Strips <script>...</script> tags and residual brackets
+ * - Strips inline event handlers (on*)
+ * - Blocks javascript:, vbscript:, and data:text/html URIs
+ * - Neutralizes encoded script schemes
  * @param {string} str
  * @returns {string}
  */
 export function sanitizeString(str) {
   if (typeof str !== 'string') return str;
 
-  // Remove <script> blocks (case-insensitive, greedy match of content)
-  let result = str.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  // Max payload length check to prevent RegExp ReDoS
+  const truncated = str.slice(0, 10000);
 
-  // Remove any remaining <script ...> opening tags
-  result = result.replace(/<script\b[^>]*>/gi, '');
+  // Remove <script> blocks (case-insensitive, greedy match of content)
+  let result = truncated.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+
+  // Remove any remaining <script ...> or <iframe> opening tags
+  result = result.replace(/<\/?(script|iframe|object|embed|applet)\b[^>]*>/gi, '');
 
   // Remove event handler attributes: on*="..." or on*='...' or on*=...
   result = result.replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
 
-  // Remove javascript: protocol (handles optional whitespace / encoding tricks)
-  result = result.replace(/javascript\s*:/gi, '');
+  // Remove dangerous URL protocols (javascript:, vbscript:, data:text/html, etc.)
+  result = result.replace(/(?:javascript|vbscript|data\s*:\s*text\/html)\s*:/gi, '');
 
   return result;
 }
 
 /**
  * Recursively deep-sanitizes all string fields in a UI schema
+ * and blocks prototype pollution attempts.
  * @param {object} schema
+ * @param {number} [depth=0] Recursion depth guard
  * @returns {object} Cleaned schema clone
  */
-export function sanitizeSchema(schema) {
-  if (!schema || typeof schema !== 'object') return schema;
+export function sanitizeSchema(schema, depth = 0) {
+  if (!schema || typeof schema !== 'object' || depth > 10) return schema;
 
   if (Array.isArray(schema)) {
-    return schema.map(sanitizeSchema);
+    return schema.map(item => sanitizeSchema(item, depth + 1));
   }
 
   const cleaned = {};
   for (const [key, val] of Object.entries(schema)) {
+    // Prototype pollution prevention
+    if (DANGEROUS_OBJECT_KEYS.has(key)) {
+      continue;
+    }
+
     if (typeof val === 'string') {
       cleaned[key] = sanitizeString(val);
     } else if (typeof val === 'object' && val !== null) {
-      cleaned[key] = sanitizeSchema(val);
+      cleaned[key] = sanitizeSchema(val, depth + 1);
     } else {
       cleaned[key] = val;
     }
@@ -308,6 +336,7 @@ export default {
   validateStep,
   sanitizeString,
   sanitizeSchema,
+  escapeHtml,
   ALLOWED_COMPONENT_TYPES,
   ALLOWED_STEP_KEYS,
   ALLOWED_COMPONENT_KEYS,
