@@ -3,6 +3,13 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+const http = require("http");
+
+const {
+    initializeWebSocket,
+    broadcastToSession
+} = require("./websocketServer");
+
 const {
     getGeneration,
     updateGeneration
@@ -118,6 +125,15 @@ app.post("/api/sessions/:sessionId/telemetry", (req, res) => {
     );
 
     const frictionStatus = evaluateFriction(session);
+
+    broadcastToSession(req.params.sessionId, {
+    type: "telemetry_update",
+    data: {
+        event,
+        cognitiveLoadScore: session.cognitiveLoadScore,
+        friction: frictionStatus
+        }
+    });
 
     res.status(201).json({
         success: true,
@@ -246,6 +262,11 @@ app.get("/api/generations/:generationId", (req, res) => {
 // Server
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+
+initializeWebSocket(server);
+
+server.listen(PORT, () => {
     console.log(`AuraGen server running on port ${PORT}`);
+    console.log("WebSocket server is ready");
 });
