@@ -23,7 +23,8 @@ const {
     createSession,
     getSession,
     addTelemetryEvent,
-    updateFormData
+    updateFormData,
+    updateGenerationTriggered
 } = require("./sessionManager");
 
 const app = express();
@@ -119,21 +120,40 @@ app.post("/api/sessions/:sessionId/telemetry", (req, res) => {
         });
     }
 
+
     const event = addTelemetryEvent(
         req.params.sessionId,
         { eventType, field, cognitiveLoadScore }
     );
 
-    const frictionStatus = evaluateFriction(session);
+    const updatedSession = getSession(req.params.sessionId);
+
+    const frictionStatus = evaluateFriction(updatedSession);
+
+    updateGenerationTriggered(
+        req.params.sessionId,
+        updatedSession.generationTriggered
+    );
 
     broadcastToSession(req.params.sessionId, {
-    type: "telemetry_update",
-    data: {
-        event,
-        cognitiveLoadScore: session.cognitiveLoadScore,
-        friction: frictionStatus
+        type: "telemetry_update",
+        data: {
+            event,
+            cognitiveLoadScore: updatedSession.cognitiveLoadScore,
+            friction: frictionStatus
         }
     });
+
+    res.status(201).json({
+        success: true,
+        message: "Telemetry event recorded successfully",
+        data: {
+            event,
+            cognitiveLoadScore: updatedSession.cognitiveLoadScore,
+            friction: frictionStatus
+        }
+    });
+
 
     res.status(201).json({
         success: true,
