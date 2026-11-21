@@ -129,19 +129,19 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
 
   return (
     <div
-      className="min-h-[60vh] flex flex-col max-w-xl mx-auto w-full py-6 px-4"
+      className="min-h-[55vh] flex flex-col max-w-xl mx-auto w-full py-3 px-2.5 sm:py-6 sm:px-4"
       onKeyDown={handleKeyDown}
       role="form"
       aria-label="Conversational Application Wizard"
     >
 
       {/* ── Progress header ── */}
-      <div className="mb-7" role="region" aria-label="Wizard Progress">
-        <div className="flex items-center justify-between mb-2.5">
+      <div className="mb-5 sm:mb-7" role="region" aria-label="Wizard Progress">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="step-chip" aria-current="step">Step {currentStepIndex + 1} of {totalSteps}</span>
-            {/* Step dot indicators */}
-            <div className="flex items-center gap-1.5 ml-2">
+            <span className="step-chip text-[11px] sm:text-xs" aria-current="step">Step {currentStepIndex + 1} of {totalSteps}</span>
+            {/* Step dot indicators (responsive) */}
+            <div className="hidden sm:flex items-center gap-1.5 ml-2">
               {steps.map((_, idx) => (
                 <span
                   key={idx}
@@ -156,7 +156,7 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
               ))}
             </div>
           </div>
-          <span className="text-xs font-semibold text-gray-400">{Math.round(progressPct)}%</span>
+          <span className="text-[11px] sm:text-xs font-semibold text-gray-400">{Math.round(progressPct)}%</span>
         </div>
         <div className="progress-track" role="progressbar" aria-valuenow={Math.round(progressPct)} aria-valuemin={0} aria-valuemax={100}>
           <div className="progress-fill" style={{ width: `${progressPct}%` }} />
@@ -175,22 +175,22 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
           transition={transition}
           className="flex-1"
         >
-          <div className="card" ref={stepContainerRef}>
+          <div className="card p-5 sm:p-8" ref={stepContainerRef}>
 
             {/* Step heading */}
             {currentStep?.title && (
-              <h2 className="text-xl font-bold text-gray-900 mb-1 tracking-tight">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1 tracking-tight">
                 {currentStep.title}
               </h2>
             )}
             {currentStep?.description && (
-              <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+              <p className="text-xs sm:text-sm text-gray-400 mb-5 sm:mb-6 leading-relaxed">
                 {currentStep.description}
               </p>
             )}
 
             {/* Fields */}
-            <div aria-live="polite">
+            <div aria-live="polite" className="space-y-1">
               {(currentStep?.components || []).map((comp) => {
                 const Component = getComponent(comp.type)
                 if (!Component) return (
@@ -211,11 +211,11 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
               })}
             </div>
 
-            {/* ── Navigation ── */}
-            <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
+            {/* ── Navigation (Mobile Responsive) ── */}
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-0 pt-4 mt-3 border-t border-gray-100">
               <button
                 type="button"
-                className="btn-secondary"
+                className="btn-secondary min-h-[44px] sm:min-h-[38px] justify-center"
                 onClick={handleBack}
                 disabled={isFirstStep && !onCancel}
                 aria-label={isFirstStep ? 'Exit conversational wizard' : 'Go to previous step'}
@@ -225,7 +225,7 @@ export default function FormWizard({ schema, preservedData, onComplete, onCancel
 
               <button
                 type="button"
-                className="btn-primary"
+                className="btn-primary min-h-[44px] sm:min-h-[38px] justify-center"
                 onClick={handleNext}
                 aria-label={isLastStep ? 'Submit final application' : 'Continue to next step'}
               >
