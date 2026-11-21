@@ -43,6 +43,9 @@ export default function FormField({
     statusClass = 'input-success';
   }
 
+  // Determine prefix padding so input text never overlaps adornments
+  const prefixPaddingClass = prefix ? (prefix.length > 1 ? '!pl-16' : '!pl-11') : '';
+
   return (
     <div className="flex flex-col mb-4.5 sm:mb-5">
       <div className="flex items-center justify-between mb-1.5">
@@ -66,8 +69,8 @@ export default function FormField({
       <div className="relative flex items-center group">
         {/* Leading Prefix Adornment (e.g. ₹ or +91) with colorful styling */}
         {prefix && (
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none select-none">
-            <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none select-none z-10">
+            <span className="text-xs font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200/70 shadow-2xs">
               {prefix}
             </span>
           </div>
@@ -84,7 +87,7 @@ export default function FormField({
             aria-invalid={hasError}
             aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
             data-telemetry-field={name}
-            className={`input-base cursor-pointer appearance-none pr-9 text-slate-800 ${prefix ? 'pl-14' : ''} ${statusClass}`}
+            className={`input-base cursor-pointer appearance-none pr-9 text-slate-800 ${prefixPaddingClass} ${statusClass}`}
           >
             <option value="">{placeholder || 'Select an option...'}</option>
             {options.map((opt) => (
@@ -109,7 +112,7 @@ export default function FormField({
             aria-invalid={hasError}
             aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
             data-telemetry-field={name}
-            className={`input-base text-slate-800 ${prefix ? 'pl-14' : ''} ${isValid && value && !hasError ? 'pr-9' : ''} ${statusClass}`}
+            className={`input-base text-slate-800 ${prefixPaddingClass} ${isValid && value && !hasError ? 'pr-9' : ''} ${statusClass}`}
           />
         )}
 

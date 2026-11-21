@@ -223,3 +223,103 @@ export function analyzeInactivityPattern(totalInactivityMs = 0, sessionDurationM
     averageIdlePeriodMs
   };
 }
+
+/**
+ * Detects whether an element or click target represents a disabled / dead element
+ * 
+ * @param {Element|null} element
+ * @returns {boolean}
+ */
+export function isElementDisabled(element) {
+  if (!element || typeof element.getAttribute !== 'function') return false;
+  return (
+    element.disabled === true ||
+    element.getAttribute('aria-disabled') === 'true' ||
+    element.classList?.contains('disabled') ||
+    Boolean(element.closest && element.closest('[disabled], [aria-disabled="true"], .disabled'))
+  );
+}
+
+/**
+ * Calculates click frequency in clicks per second (clicks/s)
+ * 
+ * @param {number} clickCount
+ * @param {number} durationMs
+ * @returns {number} clicks per second
+ */
+export function calculateClickFrequency(clickCount, durationMs) {
+  if (!clickCount || clickCount <= 1 || !durationMs || durationMs <= 0) return 0;
+  return Number(((clickCount / durationMs) * 1000).toFixed(1));
+}
+
+/**
+ * Evaluates a sequence of rapid clicks to detect rage bursts and assess severity
+ * 
+ * @param {Array<{ x: number, y: number, time: number, target: string }>} clicks
+ * @param {number} [windowMs=TELEMETRY_CONFIG.RAGE_CLICK_WINDOW_MS]
+ * @param {number} [maxDistancePx=TELEMETRY_CONFIG.RAGE_CLICK_MAX_DISTANCE_PX]
+ * @returns {{ isRageClick: boolean, clicksInBurst: number, durationMs: number, frequency: number, severity: 'none' | 'mild' | 'moderate' | 'severe', radiusPx: number }}
+ */
+export function analyzeClickBurst(
+  clicks = [],
+  windowMs = TELEMETRY_CONFIG.RAGE_CLICK_WINDOW_MS,
+  maxDistancePx = TELEMETRY_CONFIG.RAGE_CLICK_MAX_DISTANCE_PX
+) {
+  if (clicks.length < TELEMETRY_CONFIG.RAGE_CLICK_MIN_COUNT) {
+    return {
+      isRageClick: false,
+      clicksInBurst: clicks.length,
+      durationMs: 0,
+      frequency: 0,
+      severity: 'none',
+      radiusPx: 0
+    };
+  }
+
+  const first = clicks[0];
+  const last = clicks[clicks.length - 1];
+  const durationMs = last.time - first.time;
+
+  // Measure max distance from the initial click anchor point
+  let maxDisplacement = 0;
+  for (const c of clicks) {
+    const d = calculateDistance(first.x, first.y, c.x, c.y);
+    if (d > maxDisplacement) maxDisplacement = d;
+  }
+
+  const isRageClick = durationMs <= windowMs && maxDisplacement <= maxDistancePx;
+  const frequency = durationMs > 0 ? calculateClickFrequency(clicks.length, durationMs) : 0;
+
+  let severity = 'none';
+  if (isRageClick) {
+    if (clicks.length >= 5 || frequency >= 8.0) {
+      severity = 'severe';
+    } else if (clicks.length >= 4 || frequency >= 5.0) {
+      severity = 'moderate';
+    } else {
+      severity = 'mild';
+    }
+  }
+
+  return {
+    isRageClick,
+    clicksInBurst: clicks.length,
+    durationMs,
+    frequency,
+    severity,
+    radiusPx: Math.round(maxDisplacement)
+  };
+}
+
+/**
+ * Calculates a normalized rage score (0–100) reflecting user clicking frustration
+ * 
+ * @param {number} rageClickCount
+ * @param {number} [deadClickCount=0]
+ * @returns {number} 0-100 score
+ */
+export function calculateRageScore(rageClickCount = 0, deadClickCount = 0) {
+  // Each rage click adds 25 points, each dead click adds 10 points
+  const rawScore = (rageClickCount * 25) + (deadClickCount * 10);
+  return Math.min(100, Math.max(0, rawScore));
+}

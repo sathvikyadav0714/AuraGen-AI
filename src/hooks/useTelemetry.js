@@ -10,6 +10,10 @@ import {
   isFieldHesitant,
   calculateHesitationIndex,
   analyzeInactivityPattern,
+  isElementDisabled,
+  calculateClickFrequency,
+  analyzeClickBurst,
+  calculateRageScore,
   getSafeElementId
 } from '../utils/telemetry';
 
@@ -24,10 +28,15 @@ const INITIAL_TELEMETRY_STATE = {
   erraticMovementScore: 0,     // Sharp direction reversal score (0–100)
   movementEventCount: 0,
 
-  // Clicks & Rage Clicks
+  // Clicks & Rage Clicks (Day 9 Enhancements)
   totalClickCount: 0,
   rageClickCount: 0,
+  deadClickCount: 0,
+  rageScore: 0,                // Normalized click frustration score (0–100)
+  peakClickFrequency: 0,       // Max clicks per second observed
   lastClickedElement: null,
+  rageClickHistory: [],        // [{ target, clicksInBurst, durationMs, frequency, severity, timestamp }]
+  targetClickMap: {},          // { [target]: { count, rageCount, deadCount } }
 
   // Hesitation & Inactivity (Day 8 Deliverables)
   isCurrentlyInactive: false,
@@ -60,11 +69,10 @@ const INITIAL_TELEMETRY_STATE = {
  * Custom React Hook for Non-Invasive Behavioral Telemetry & Cognitive Friction Tracking
  * 
  * Features:
- * - Real-time inactivity & pause detection
- * - Field-level focus hesitation and abandonment measurement
- * - Cursor kinematics (velocity, acceleration, erratic path trajectory)
- * - Rage-click burst monitoring
- * - Non-PII privacy guarantee (only element metadata, never values)
+ * - Day 9: Rage-click burst analyzer & dead click detection
+ * - Day 8: Inactivity timer & input hesitation detection
+ * - Day 7: Cursor velocity kinematics & path efficiency
+ * - Non-PII guarantee (captures interaction dynamics, never input values)
  * 
  * @param {Object} [options]
  * @param {boolean} [options.enabled=true] - Whether tracking is active
@@ -97,11 +105,15 @@ export default function useTelemetry(options = {}) {
   const trajectoryPointsRef = useRef([]); // Recent points for erratic turn analysis
   const movementEventsRef = useRef(0);
 
-  // Click & Rage Click Tracking Refs
+  // Click & Rage Click Tracking Refs (Day 9)
   const totalClicksRef = useRef(0);
   const recentClicksRef = useRef([]); // Stores [{ x, y, time, target }]
   const rageClicksCountRef = useRef(0);
+  const deadClicksCountRef = useRef(0);
+  const peakClickFrequencyRef = useRef(0);
   const lastClickedElementRef = useRef(null);
+  const rageClickHistoryRef = useRef([]);
+  const targetClickMapRef = useRef({});
 
   // Hesitation Tracking Refs
   const activeFocusFieldRef = useRef(null);
@@ -186,7 +198,7 @@ export default function useTelemetry(options = {}) {
     }
   }, [onFrictionEvent, registerUserActivity]);
 
-  // 2. Click & Rage Click Listener
+  // 2. Click, Rage Click Burst & Dead Click Listener (Day 9 Deliverable)
   const handleClick = useCallback((e) => {
     const now = Date.now();
     registerUserActivity(now);
@@ -195,6 +207,29 @@ export default function useTelemetry(options = {}) {
     const safeTarget = getSafeElementId(e.target);
     lastClickedElementRef.current = safeTarget;
 
+    // Update target click map
+    const existingTargetStats = targetClickMapRef.current[safeTarget] || { count: 0, rageCount: 0, deadCount: 0 };
+    targetClickMapRef.current[safeTarget] = {
+      ...existingTargetStats,
+      count: existingTargetStats.count + 1
+    };
+
+    // A. Dead Click Detection (e.g. clicking on disabled button or non-responsive element)
+    const isDead = isElementDisabled(e.target);
+    if (isDead) {
+      deadClicksCountRef.current += 1;
+      targetClickMapRef.current[safeTarget].deadCount += 1;
+
+      if (onFrictionEvent) {
+        onFrictionEvent({
+          type: 'dead_click',
+          target: safeTarget,
+          timestamp: now
+        });
+      }
+    }
+
+    // B. Rapid Click Burst & Rage Click Detection
     const currentClick = {
       x: e.clientX,
       y: e.clientY,
@@ -202,29 +237,53 @@ export default function useTelemetry(options = {}) {
       target: safeTarget
     };
 
-    // Filter clicks within the rage click window (e.g. 600ms)
+    // Keep clicks within the rage window
     const windowStart = now - TELEMETRY_CONFIG.RAGE_CLICK_WINDOW_MS;
     const recent = recentClicksRef.current.filter((c) => c.time >= windowStart);
     recent.push(currentClick);
     recentClicksRef.current = recent;
 
-    // Detect rage clicks (3+ clicks within 600ms on same location / target)
-    if (recent.length >= TELEMETRY_CONFIG.RAGE_CLICK_MIN_COUNT) {
-      const first = recent[0];
-      const dist = calculateDistance(first.x, first.y, currentClick.x, currentClick.y);
+    // Analyze rapid click burst
+    const burst = analyzeClickBurst(
+      recentClicksRef.current,
+      TELEMETRY_CONFIG.RAGE_CLICK_WINDOW_MS,
+      TELEMETRY_CONFIG.RAGE_CLICK_MAX_DISTANCE_PX
+    );
 
-      if (dist <= TELEMETRY_CONFIG.RAGE_CLICK_MAX_DISTANCE_PX) {
-        rageClicksCountRef.current += 1;
-        recentClicksRef.current = []; // Reset after registering rage click
+    if (burst.isRageClick) {
+      rageClicksCountRef.current += 1;
+      targetClickMapRef.current[safeTarget].rageCount += 1;
 
-        if (onFrictionEvent) {
-          onFrictionEvent({
-            type: 'rage_click',
-            target: safeTarget,
-            clicksInBurst: recent.length,
-            timestamp: now
-          });
-        }
+      if (burst.frequency > peakClickFrequencyRef.current) {
+        peakClickFrequencyRef.current = burst.frequency;
+      }
+
+      // Record in history log
+      const rageEvent = {
+        target: safeTarget,
+        clicksInBurst: burst.clicksInBurst,
+        durationMs: burst.durationMs,
+        frequency: burst.frequency,
+        severity: burst.severity,
+        radiusPx: burst.radiusPx,
+        timestamp: now
+      };
+      rageClickHistoryRef.current.push(rageEvent);
+
+      // Reset buffer after triggering rage click
+      recentClicksRef.current = [];
+
+      if (onFrictionEvent) {
+        onFrictionEvent({
+          type: 'rage_click',
+          target: safeTarget,
+          clicksInBurst: burst.clicksInBurst,
+          durationMs: burst.durationMs,
+          frequency: burst.frequency,
+          severity: burst.severity,
+          radiusPx: burst.radiusPx,
+          timestamp: now
+        });
       }
     }
   }, [onFrictionEvent, registerUserActivity]);
@@ -372,7 +431,11 @@ export default function useTelemetry(options = {}) {
     totalClicksRef.current = 0;
     recentClicksRef.current = [];
     rageClicksCountRef.current = 0;
+    deadClicksCountRef.current = 0;
+    peakClickFrequencyRef.current = 0;
     lastClickedElementRef.current = null;
+    rageClickHistoryRef.current = [];
+    targetClickMapRef.current = {};
 
     activeFocusFieldRef.current = null;
     focusStartTimeRef.current = null;
@@ -439,6 +502,9 @@ export default function useTelemetry(options = {}) {
         inactivityPeriodsCountRef.current
       );
 
+      // Calculate normalized rage frustration score (0–100)
+      const rageScore = calculateRageScore(rageClicksCountRef.current, deadClicksCountRef.current);
+
       // Current focus duration (if currently dwelling inside a field)
       const currentFocusDuration = focusStartTimeRef.current ? now - focusStartTimeRef.current : 0;
 
@@ -454,7 +520,12 @@ export default function useTelemetry(options = {}) {
         movementEventCount: movementEventsRef.current,
         totalClickCount: totalClicksRef.current,
         rageClickCount: rageClicksCountRef.current,
+        deadClickCount: deadClicksCountRef.current,
+        rageScore,
+        peakClickFrequency: peakClickFrequencyRef.current,
         lastClickedElement: lastClickedElementRef.current,
+        rageClickHistory: [...rageClickHistoryRef.current],
+        targetClickMap: { ...targetClickMapRef.current },
         isCurrentlyInactive: isInactiveRef.current,
         currentInactivityDurationMs: currentInactivityMsRef.current,
         totalInactivityDurationMs: accumulatedInactivityMsRef.current,

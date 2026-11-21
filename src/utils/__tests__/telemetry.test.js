@@ -12,6 +12,10 @@ import {
   calculateHesitationIndex,
   formatHesitationSummary,
   analyzeInactivityPattern,
+  isElementDisabled,
+  calculateClickFrequency,
+  analyzeClickBurst,
+  calculateRageScore,
   getSafeElementId,
   TELEMETRY_CONFIG
 } from '../telemetry.js';
@@ -253,6 +257,103 @@ describe('AuraGen - Telemetry Utilities', () => {
       assert.equal(result.severity, 'high');
       assert.equal(result.isExcessive, true);
       assert.equal(result.averageIdlePeriodMs, 4000);
+    });
+  });
+
+  describe('isElementDisabled (Day 9)', () => {
+    it('should return false for null or normal interactive elements', () => {
+      assert.equal(isElementDisabled(null), false);
+      const normalBtn = { disabled: false, getAttribute: () => null };
+      assert.equal(isElementDisabled(normalBtn), false);
+    });
+
+    it('should return true for disabled=true or aria-disabled=true', () => {
+      const disabledBtn = { disabled: true, getAttribute: () => null };
+      assert.equal(isElementDisabled(disabledBtn), true);
+
+      const ariaDisabledBtn = {
+        disabled: false,
+        getAttribute: (attr) => (attr === 'aria-disabled' ? 'true' : null)
+      };
+      assert.equal(isElementDisabled(ariaDisabledBtn), true);
+    });
+  });
+
+  describe('calculateClickFrequency (Day 9)', () => {
+    it('should return 0 for single click or zero duration', () => {
+      assert.equal(calculateClickFrequency(1, 1000), 0);
+      assert.equal(calculateClickFrequency(3, 0), 0);
+    });
+
+    it('should calculate accurate clicks per second', () => {
+      // 4 clicks in 500ms = 8.0 clicks/sec
+      assert.equal(calculateClickFrequency(4, 500), 8);
+      // 3 clicks in 600ms = 5.0 clicks/sec
+      assert.equal(calculateClickFrequency(3, 600), 5);
+    });
+  });
+
+  describe('analyzeClickBurst (Day 9)', () => {
+    it('should return isRageClick=false for fewer than 3 clicks', () => {
+      const clicks = [
+        { x: 100, y: 100, time: 1000, target: 'btn' },
+        { x: 102, y: 101, time: 1200, target: 'btn' }
+      ];
+      const result = analyzeClickBurst(clicks);
+      assert.equal(result.isRageClick, false);
+      assert.equal(result.clicksInBurst, 2);
+    });
+
+    it('should return isRageClick=false if clicks are spatially dispersed (wandering clicks)', () => {
+      const dispersedClicks = [
+        { x: 100, y: 100, time: 1000, target: 'btn' },
+        { x: 200, y: 200, time: 1200, target: 'btn' }, // 141px away
+        { x: 300, y: 300, time: 1400, target: 'btn' }
+      ];
+      const result = analyzeClickBurst(dispersedClicks, 600, 20);
+      assert.equal(result.isRageClick, false);
+    });
+
+    it('should detect rage click burst in tight radius within window', () => {
+      const rapidClicks = [
+        { x: 100, y: 100, time: 1000, target: 'btn' },
+        { x: 105, y: 102, time: 1150, target: 'btn' },
+        { x: 102, y: 104, time: 1300, target: 'btn' }
+      ];
+      // 3 clicks in 300ms, max radius ~5.4px
+      const result = analyzeClickBurst(rapidClicks, 600, 20);
+      assert.equal(result.isRageClick, true);
+      assert.equal(result.clicksInBurst, 3);
+      assert.equal(result.durationMs, 300);
+      assert.equal(result.frequency, 10);
+      assert.equal(result.severity, 'severe'); // frequency 10 >= 8
+    });
+
+    it('should classify mild and moderate severity bursts', () => {
+      // 3 clicks over 500ms (frequency = 6.0/s -> moderate)
+      const moderateClicks = [
+        { x: 100, y: 100, time: 1000, target: 'btn' },
+        { x: 102, y: 100, time: 1250, target: 'btn' },
+        { x: 101, y: 101, time: 1500, target: 'btn' }
+      ];
+      const modResult = analyzeClickBurst(moderateClicks, 600, 20);
+      assert.equal(modResult.isRageClick, true);
+      assert.equal(modResult.severity, 'moderate');
+    });
+  });
+
+  describe('calculateRageScore (Day 9)', () => {
+    it('should return 0 for zero rage clicks and dead clicks', () => {
+      assert.equal(calculateRageScore(0, 0), 0);
+    });
+
+    it('should weight rage clicks (25 pts) and dead clicks (10 pts)', () => {
+      // 2 rage clicks (50) + 1 dead click (10) = 60
+      assert.equal(calculateRageScore(2, 1), 60);
+    });
+
+    it('should cap rage score at 100', () => {
+      assert.equal(calculateRageScore(5, 5), 100);
     });
   });
 });

@@ -12,9 +12,16 @@ export default function App() {
   const { telemetry, recordValidationError, resetTelemetry } = useTelemetry({
     onFrictionEvent: (event) => {
       if (event.type === 'rage_click') {
+        const severityTag = event.severity ? `[${event.severity.toUpperCase()}] ` : '';
         setLastValidationFriction({
           field: event.target,
-          error: `Rage Click Burst Detected (${event.clicksInBurst} clicks within 600ms)`,
+          error: `${severityTag}Rage Click Burst Detected! (${event.clicksInBurst} rapid clicks in ${formatDuration(event.durationMs)} at ${event.frequency} clicks/s)`,
+          timestamp: new Date().toLocaleTimeString()
+        });
+      } else if (event.type === 'dead_click') {
+        setLastValidationFriction({
+          field: event.target,
+          error: `Dead Click Detected (User repeatedly clicked a disabled or inactive element)`,
           timestamp: new Date().toLocaleTimeString()
         });
       } else if (event.type === 'hesitation') {
@@ -130,10 +137,21 @@ export default function App() {
             </span>
             <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
               🎯 Clicks: <strong className="text-slate-900">{telemetry.totalClickCount}</strong>
+              {telemetry.peakClickFrequency > 0 && (
+                <span className="ml-1 text-indigo-600">(Peak: {telemetry.peakClickFrequency}/s)</span>
+              )}
             </span>
             <span className={`px-2 py-1 rounded-md ${telemetry.rageClickCount > 0 ? 'bg-rose-100 text-rose-800 font-bold' : 'bg-slate-100 text-slate-700'}`}>
-              ⚡ Rage: <strong>{telemetry.rageClickCount}</strong>
+              ⚡ Rage Clicks: <strong>{telemetry.rageClickCount}</strong>
+              {telemetry.rageScore > 0 && (
+                <span className="ml-1 text-rose-700">(Score: {telemetry.rageScore})</span>
+              )}
             </span>
+            {telemetry.deadClickCount > 0 && (
+              <span className="bg-amber-100 text-amber-900 px-2 py-1 rounded-md font-bold">
+                🚫 Dead Clicks: <strong>{telemetry.deadClickCount}</strong>
+              </span>
+            )}
             <span className="bg-slate-100 px-2 py-1 rounded-md text-slate-700">
               🛑 Errors: <strong className="text-rose-600">{telemetry.validationErrorCount}</strong>
             </span>
