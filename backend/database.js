@@ -2,7 +2,7 @@
 const path = require("path");
 const { DatabaseSync } = require("node:sqlite");
 
-const dbPath = path.join(__dirname, "auragen.db");
+const dbPath = process.env.DB_PATH || path.join(__dirname, "auragen.db");
 const db = new DatabaseSync(dbPath);
 
 // Create sessions table if it does not exist

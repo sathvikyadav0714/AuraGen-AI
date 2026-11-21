@@ -280,13 +280,20 @@ app.get("/api/generations/:generationId", (req, res) => {
 });
 
 // Server
-const PORT = process.env.PORT || 5000;
 
-const server = http.createServer(app);
+// Start server only when this file is executed directly
+if (require.main === module) {
+    const PORT = process.env.PORT || 5000;
 
-initializeWebSocket(server);
+    const server = http.createServer(app);
 
-server.listen(PORT, () => {
-    console.log(`AuraGen server running on port ${PORT}`);
-    console.log("WebSocket server is ready");
-});
+    initializeWebSocket(server);
+
+    server.listen(PORT, () => {
+        console.log(`AuraGen server running on port ${PORT}`);
+        console.log("WebSocket server is ready");
+    });
+}
+
+// Export Express app for automated testing
+module.exports = app;
