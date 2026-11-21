@@ -70,11 +70,33 @@ const emptyQuestion = JSON.stringify({
     progress: 50
 });
 
-// Test 8: Invalid navigation
+// Test 8: Invalid navigation type
 const invalidNavigation = JSON.stringify({
     title: "Financial Form",
     steps: [],
     navigation: ["Next", 123],
+    progress: 50
+});
+
+// Test 9: Unexpected step property
+const unexpectedProperty = JSON.stringify({
+    title: "Financial Form",
+    steps: [
+        {
+            question: "Enter your age",
+            component: "NUMBER_INPUT",
+            javascript: "runSomething()"
+        }
+    ],
+    navigation: ["Next", "Back"],
+    progress: 50
+});
+
+// Test 10: Unsupported navigation action
+const unsupportedNavigation = JSON.stringify({
+    title: "Financial Form",
+    steps: [],
+    navigation: ["Next", "DELETE"],
     progress: 50
 });
 
@@ -116,8 +138,18 @@ const testCases = [
         expected: false
     },
     {
-        name: "Invalid navigation",
+        name: "Invalid navigation type",
         response: invalidNavigation,
+        expected: false
+    },
+    {
+        name: "Unexpected step property",
+        response: unexpectedProperty,
+        expected: false
+    },
+    {
+        name: "Unsupported navigation action",
+        response: unsupportedNavigation,
         expected: false
     }
 ];
@@ -149,7 +181,7 @@ for (const test of testCases) {
     }
 }
 
-// Display final summary
+// Display final test summary
 console.log("\n===== FINAL TEST SUMMARY =====");
 console.log("Total tests:", testCases.length);
 console.log("Passed:", passed);

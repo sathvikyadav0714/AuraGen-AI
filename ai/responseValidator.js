@@ -32,7 +32,7 @@ export function validateAIResponse(response) {
         };
 
         for (const [field, expectedType] of Object.entries(requiredFields)) {
-            if (!(field in parsedResponse)) {
+            if (!Object.prototype.hasOwnProperty.call(parsedResponse, field)) {
                 throw new Error(`Missing required field: ${field}`);
             }
 
@@ -62,6 +62,20 @@ export function validateAIResponse(response) {
                 throw new Error("Each step must be an object.");
             }
 
+            // Check whether the step contains only allowed properties
+            const allowedStepProperties = ["question", "component"];
+
+            const unexpectedProperties = Object.keys(step).filter(
+                property => !allowedStepProperties.includes(property)
+            );
+
+            if (unexpectedProperties.length > 0) {
+                throw new Error(
+                    `Unexpected step properties: ${unexpectedProperties.join(", ")}`
+                );
+            }
+
+            // Validate question
             if (
                 typeof step.question !== "string" ||
                 step.question.trim() === ""
@@ -71,6 +85,7 @@ export function validateAIResponse(response) {
                 );
             }
 
+            // Validate component
             if (
                 typeof step.component !== "string" ||
                 step.component.trim() === ""
@@ -93,14 +108,18 @@ export function validateAIResponse(response) {
             }
         }
 
-        // Step 7: Validate navigation
+        // Step 7: Validate navigation actions
+        const allowedNavigation = ["Next", "Back", "Submit"];
+
         if (
             !parsedResponse.navigation.every(
-                item => typeof item === "string" && item.trim() !== ""
+                item =>
+                    typeof item === "string" &&
+                    allowedNavigation.includes(item)
             )
         ) {
             throw new Error(
-                "Navigation must contain non-empty strings."
+                "Navigation contains unsupported actions."
             );
         }
 
@@ -122,9 +141,12 @@ export function validateAIResponse(response) {
         };
 
     } catch (error) {
+        // Handle validation errors
         return {
             valid: false,
             error: error.message
         };
     }
 }
+
+
