@@ -3,6 +3,13 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+const {
+    getGeneration,
+    updateGeneration
+} = require("./generationManager");
+
+const { requestGeneration } = require("./generationController");
+
 const { evaluateFriction } = require("./frictionMonitor");
 
 const {
@@ -202,6 +209,37 @@ app.get("/api/sessions/:sessionId/form", (req, res) => {
     res.status(200).json({
         success: true,
         data: session.formData
+    });
+});
+
+// Request AI generation
+app.post("/api/sessions/:sessionId/generate", (req, res, next) => {
+    const session = getSession(req.params.sessionId);
+
+    if (!session) {
+        return res.status(404).json({
+            success: false,
+            message: "Session not found"
+        });
+    }
+
+    requestGeneration(req, res);
+});
+
+// Get generation status
+app.get("/api/generations/:generationId", (req, res) => {
+    const generation = getGeneration(req.params.generationId);
+
+    if (!generation) {
+        return res.status(404).json({
+            success: false,
+            message: "Generation not found"
+        });
+    }
+
+    res.json({
+        success: true,
+        data: generation
     });
 });
 
