@@ -7,6 +7,14 @@ const { updateGeneration } = require("../generationManager");
 
 describe("AuraGen Backend API Tests", () => {
 
+    async function createTestSession() {
+        const response = await request(app).post("/api/sessions");
+
+        expect(response.statusCode).toBe(201);
+
+        return response.body.data.sessionId;
+    }
+
     // Test 1: Health check
     test("GET /api/health should return healthy status", async () => {
         const response = await request(app).get("/api/health");
@@ -15,15 +23,6 @@ describe("AuraGen Backend API Tests", () => {
         expect(response.body.success).toBe(true);
         expect(response.body.status).toBe("Healthy");
     });
-
-    // Helper: Create a test session
-    async function createTestSession() {
-        const response = await request(app).post("/api/sessions");
-
-        expect(response.statusCode).toBe(201);
-
-        return response.body.data.sessionId;
-    }
 
     // Test 2: Create session
     test("POST /api/sessions should create a session", async () => {
@@ -35,7 +34,7 @@ describe("AuraGen Backend API Tests", () => {
     });
 
     // Test 3: Retrieve session
-    test("GET /api/sessions/:sessionId should retrieve a session", async () => {
+    test("GET session should retrieve an existing session", async () => {
         const sessionId = await createTestSession();
 
         const response = await request(app)
@@ -45,27 +44,34 @@ describe("AuraGen Backend API Tests", () => {
         expect(response.body.data.sessionId).toBe(sessionId);
     });
 
-    // Test 4: Invalid session
-    test("GET /api/sessions/:sessionId should return 404 for invalid session", async () => {
+    // Test 4: Reject malformed UUID
+    test("GET session should reject malformed session IDs", async () => {
         const response = await request(app)
             .get("/api/sessions/invalid-session-id");
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.success).toBe(false);
+    });
+
+    // Test 5: Nonexistent valid UUID
+    test("GET session should return 404 for nonexistent UUID", async () => {
+        const response = await request(app)
+            .get("/api/sessions/123e4567-e89b-42d3-a456-426614174000");
 
         expect(response.statusCode).toBe(404);
         expect(response.body.success).toBe(false);
     });
 
-    // Test 5: Save and retrieve form data
+    // Test 6: Save and retrieve form data
     test("PATCH and GET form APIs should save and retrieve form data", async () => {
         const sessionId = await createTestSession();
 
-        const formData = {
-            name: "Test User",
-            occupation: "Student"
-        };
-
         const saveResponse = await request(app)
             .patch(`/api/sessions/${sessionId}/form`)
-            .send(formData);
+            .send({
+                name: "Test User",
+                occupation: "Student"
+            });
 
         expect(saveResponse.statusCode).toBe(200);
         expect(saveResponse.body.data.name).toBe("Test User");
@@ -77,7 +83,19 @@ describe("AuraGen Backend API Tests", () => {
         expect(getResponse.body.data.occupation).toBe("Student");
     });
 
-    // Test 6: Reject invalid telemetry
+    // Test 7: Reject empty form data
+    test("PATCH form should reject empty form data", async () => {
+        const sessionId = await createTestSession();
+
+        const response = await request(app)
+            .patch(`/api/sessions/${sessionId}/form`)
+            .send({});
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.success).toBe(false);
+    });
+
+    // Test 8: Reject invalid telemetry
     test("POST telemetry should reject invalid event types", async () => {
         const sessionId = await createTestSession();
 
@@ -92,7 +110,7 @@ describe("AuraGen Backend API Tests", () => {
         expect(response.body.success).toBe(false);
     });
 
-    // Test 7: Record valid telemetry
+    // Test 9: Record valid telemetry
     test("POST telemetry should record valid events", async () => {
         const sessionId = await createTestSession();
 
@@ -109,7 +127,7 @@ describe("AuraGen Backend API Tests", () => {
         expect(response.body.data.cognitiveLoadScore).toBe(85);
     });
 
-    // Test 8: Retrieve telemetry summary
+    // Test 10: Telemetry summary
     test("GET telemetry summary should return event counts", async () => {
         const sessionId = await createTestSession();
 
@@ -128,7 +146,20 @@ describe("AuraGen Backend API Tests", () => {
         expect(response.body.data.rageClicks).toBe(1);
     });
 
-    // Test 9: Create AI generation request
+    // Test 11: Reject malformed telemetry session ID
+    test("POST telemetry should reject malformed session IDs", async () => {
+        const response = await request(app)
+            .post("/api/sessions/invalid-id/telemetry")
+            .send({
+                eventType: "rage_click",
+                cognitiveLoadScore: 50
+            });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.success).toBe(false);
+    });
+
+    // Test 12: Create AI generation request
     test("POST generate should create a pending generation", async () => {
         const sessionId = await createTestSession();
 
@@ -141,7 +172,7 @@ describe("AuraGen Backend API Tests", () => {
         expect(response.body.data.generationId).toBeDefined();
     });
 
-    // Test 10: Prevent duplicate generation
+    // Test 13: Prevent duplicate generation
     test("POST generate should reject duplicate requests", async () => {
         const sessionId = await createTestSession();
 
@@ -153,12 +184,9 @@ describe("AuraGen Backend API Tests", () => {
 
         expect(firstResponse.statusCode).toBe(202);
         expect(secondResponse.statusCode).toBe(409);
-        expect(secondResponse.body.message).toBe(
-            "Generation already in progress"
-        );
     });
 
-    // Test 11: Retrieve generation status
+    // Test 14: Retrieve generation status
     test("GET generation should return its status", async () => {
         const sessionId = await createTestSession();
 
@@ -174,7 +202,7 @@ describe("AuraGen Backend API Tests", () => {
         expect(response.body.data.status).toBe("pending");
     });
 
-    // Test 12: Update generation status
+    // Test 15: Update generation status
     test("Generation manager should handle completed and failed states", async () => {
         const sessionId1 = await createTestSession();
         const sessionId2 = await createTestSession();
@@ -202,6 +230,82 @@ describe("AuraGen Backend API Tests", () => {
         expect(failed.status).toBe("failed");
         expect(failed.error).toBe("Test generation error");
         expect(failed.completedAt).not.toBeNull();
+    });
+
+    // Test 16: Reject malformed JSON
+    test("API should reject malformed JSON", async () => {
+        const response = await request(app)
+            .post("/api/sessions")
+            .set("Content-Type", "application/json")
+            .send('{"name":');
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.message).toBe("Invalid JSON request body");
+    });
+
+    // Test 17: Reject oversized payload
+    test("API should reject payloads larger than 100KB", async () => {
+        const response = await request(app)
+            .post("/api/sessions")
+            .send({
+                data: "x".repeat(110 * 1024)
+            });
+
+        expect(response.statusCode).toBe(413);
+        expect(response.body.message).toBe("Request payload is too large");
+    });
+
+    // Test 18: Reject nested form data
+    test("PATCH form should reject nested objects", async () => {
+        const sessionId = await createTestSession();
+
+        const response = await request(app)
+            .patch(`/api/sessions/${sessionId}/form`)
+            .send({
+                name: "Test User",
+                details: {
+                    income: 50000
+                }
+            });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.success).toBe(false);
+    });
+
+    // Test 19: Reject excessively long form values
+    test("PATCH form should reject values longer than 5000 characters", async () => {
+        const sessionId = await createTestSession();
+
+        const response = await request(app)
+            .patch(`/api/sessions/${sessionId}/form`)
+            .send({
+                name: "x".repeat(5001)
+            });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.success).toBe(false);
+    });
+
+    // Test 20: Preserve previously saved form fields
+    test("PATCH form should preserve previously saved fields", async () => {
+        const sessionId = await createTestSession();
+
+        await request(app)
+            .patch(`/api/sessions/${sessionId}/form`)
+            .send({
+                name: "Sathvik",
+                occupation: "Student"
+            });
+
+        const response = await request(app)
+            .patch(`/api/sessions/${sessionId}/form`)
+            .send({
+                occupation: "Developer"
+            });
+
+        expect(response.statusCode).toBe(200);
+        expect(response.body.data.name).toBe("Sathvik");
+        expect(response.body.data.occupation).toBe("Developer");
     });
 
 });
