@@ -3,3 +3,5 @@ node_modules/
 auragen.db
 auragen.db-shm
 auragen.db-wal
+
+coverage/
