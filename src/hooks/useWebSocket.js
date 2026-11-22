@@ -4,7 +4,9 @@ const MAX_RETRIES = 5
 const BASE_RECONNECT_DELAY = 1500
 const PING_INTERVAL = 25000
 
-export default function useWebSocket(url = 'ws://localhost:3000') {
+const DEFAULT_WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:5000';
+
+export default function useWebSocket(url = DEFAULT_WS_URL, sessionId = null) {
   const socketRef = useRef(null)
   const reconnectTimerRef = useRef(null)
   const pingTimerRef = useRef(null)
@@ -37,6 +39,12 @@ export default function useWebSocket(url = 'ws://localhost:3000') {
   }, [stopHeartbeat])
 
   const connect = useCallback(() => {
+    // If no sessionId is provided yet, do not attempt invalid connection
+    if (!sessionId) {
+      setConnectionState('WAITING_SESSION')
+      return
+    }
+
     // Clean up any existing socket
     if (socketRef.current) {
       socketRef.current.onopen = null
@@ -50,7 +58,11 @@ export default function useWebSocket(url = 'ws://localhost:3000') {
     setConnectionState(reconnectCountRef.current > 0 ? 'RECONNECTING' : 'CONNECTING')
 
     try {
-      const ws = new WebSocket(url)
+      const fullUrl = sessionId
+        ? (url.includes('?') ? `${url}&sessionId=${sessionId}` : `${url}/?sessionId=${sessionId}`)
+        : url;
+
+      const ws = new WebSocket(fullUrl)
       socketRef.current = ws
 
       ws.onopen = () => {
@@ -67,6 +79,12 @@ export default function useWebSocket(url = 'ws://localhost:3000') {
           const parsed = JSON.parse(event.data)
           // Ignore heartbeat pong messages
           if (parsed.type === 'pong') return
+
+          // Normalize backend messages
+          if (parsed.type === 'connection_established') {
+            console.info('[WebSocket] Connected to session:', parsed.sessionId)
+          }
+
           setLastMessage(parsed)
         } catch {
           setLastMessage(event.data)
@@ -88,19 +106,19 @@ export default function useWebSocket(url = 'ws://localhost:3000') {
           }, delay)
         } else {
           setConnectionState('DISCONNECTED')
-          setError('Max reconnection attempts reached. Running in offline demo mode.')
+          setError('Backend WebSocket offline. Running in hybrid demo mode.')
         }
       }
 
       ws.onerror = () => {
-        setError('WebSocket encountered a network error')
+        setError('WebSocket network error (is backend running on port 5000?)')
         setConnectionState('ERROR')
       }
     } catch {
       setError('Failed to initialize WebSocket client')
       setConnectionState('ERROR')
     }
-  }, [url, startHeartbeat, stopHeartbeat])
+  }, [url, sessionId, startHeartbeat, stopHeartbeat])
 
   useEffect(() => {
     connect()

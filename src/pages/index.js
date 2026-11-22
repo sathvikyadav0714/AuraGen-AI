@@ -47,8 +47,69 @@ const DEMO_SCHEMA = {
   metadata: { generatedAt: new Date().toISOString(), version: '1.0' }
 }
 
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import Head from 'next/head'
+import { AnimatePresence } from 'framer-motion'
+import TransitionManager from '../components/TransitionManager'
+import DynamicRenderer from '../components/DynamicRenderer'
+import useWebSocket from '../hooks/useWebSocket'
+import useTelemetry from '../hooks/useTelemetry'
+import {
+  createSession,
+  saveFormData,
+  getFormData,
+  sendTelemetryEvent,
+  triggerGenerationRequest,
+  submitFormToBackend,
+} from '../lib/api'
+
+const DEMO_SCHEMA = {
+  steps: [
+    {
+      id: 'personal',
+      title: "Let's start with your name",
+      description: 'We just need a few basic details.',
+      components: [
+        { type: 'TextInput', id: 'fullName', name: 'fullName', label: 'Full Name', placeholder: 'e.g. Priya Sharma', required: true },
+        { type: 'EmailInput', id: 'email', name: 'email', label: 'Email Address', placeholder: 'you@example.com', required: true }
+      ]
+    },
+    {
+      id: 'financial',
+      title: 'Your financial details',
+      description: 'Tell us about your income and what you need.',
+      components: [
+        {
+          type: 'SelectInput', id: 'employmentStatus', name: 'employmentStatus', label: 'What best describes you?', required: true,
+          options: [
+            { value: 'salaried', label: 'Salaried Employee' },
+            { value: 'self_employed', label: 'Self Employed' },
+            { value: 'business', label: 'Business Owner' },
+            { value: 'student', label: 'Student' }
+          ]
+        },
+        { type: 'NumberInput', id: 'annualIncome', name: 'annualIncome', label: 'Annual Income (₹)', placeholder: 'e.g. 750000', required: true },
+        { type: 'NumberInput', id: 'loanAmount', name: 'loanAmount', label: 'Loan Amount Needed (₹)', placeholder: 'e.g. 250000', required: true }
+      ]
+    },
+    {
+      id: 'contact',
+      title: 'Almost done!',
+      description: 'Just your phone number to complete the application.',
+      components: [
+        { type: 'PhoneInput', id: 'phone', name: 'phone', label: 'Phone Number', placeholder: '9876543210', required: true },
+        { type: 'InfoBlock', id: 'info1', name: 'info1', label: 'Privacy Note', message: 'Your information is encrypted and never shared with third parties.' }
+      ]
+    }
+  ],
+  metadata: { generatedAt: new Date().toISOString(), version: '1.0' }
+}
+
 export default function AuraGenPage() {
+  const [sessionId, setSessionId] = useState(null)
   const [mode, setMode] = useState('original')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionResult, setSubmissionResult] = useState(null)
   const [preservedFormData, setPreservedFormData] = useState({
     fullName: 'Rahul Verma',
     email: 'rahul.verma@example.com',
@@ -56,42 +117,135 @@ export default function AuraGenPage() {
     loanAmount: '250000',
   })
   const [uiSchema, setUiSchema] = useState(null)
-  const [cognitiveScore, setCognitiveScore] = useState(0)
-  const [demoMode, setDemoMode] = useState(true)
+  const [saveStatus, setSaveStatus] = useState('idle')
 
-  const { isConnected, connectionState, lastMessage, error, sendMessage, simulateServerMessage, reconnectCount } = useWebSocket('ws://localhost:3000')
+  const autoSaveDebounceRef = useRef(null)
 
-  // Handle WebSocket messages
+  // 1. Initialize Backend Session on mount
+  useEffect(() => {
+    let mounted = true
+    async function initSession() {
+      const session = await createSession()
+      if (mounted && session?.sessionId) {
+        setSessionId(session.sessionId)
+        console.info('[AuraGen] Session initialized:', session.sessionId)
+      }
+    }
+    initSession()
+    return () => { mounted = false }
+  }, [])
+
+  // 2. Real-time Telemetry Tracking Hook
+  const {
+    cognitiveScore,
+    setCognitiveScore,
+    recordValidationError,
+    recordFailedInteraction,
+    emitTelemetry,
+  } = useTelemetry(sessionId)
+
+  // 3. Real-time WebSocket Connection directly bound to Session ID (Port 5000)
+  const {
+    isConnected,
+    connectionState,
+    lastMessage,
+    error: wsError,
+    sendMessage,
+    simulateServerMessage,
+  } = useWebSocket('ws://localhost:5000', sessionId)
+
+  // 4. Handle incoming WebSocket backend messages
   useEffect(() => {
     if (!lastMessage) return
 
-    if (lastMessage.type === 'cognitive_load_update') {
-      setCognitiveScore(lastMessage.score)
+    if (lastMessage.type === 'cognitive_load_update' || lastMessage.type === 'friction_evaluated') {
+      const score = lastMessage.cognitiveLoadScore ?? lastMessage.score ?? lastMessage.data?.cognitiveLoadScore
+      if (typeof score === 'number') {
+        setCognitiveScore(score)
+      }
     } else if (lastMessage.type === 'ui_generation_started') {
       setMode('loading')
-    } else if (lastMessage.type === 'ui_generated') {
-      setUiSchema(lastMessage.schema)
-      setPreservedFormData(lastMessage.preservedData || {})
-      setMode('wizard')
-    } else if (lastMessage.type === 'ui_generation_failed') {
+    } else if (lastMessage.type === 'ui_generated' || lastMessage.type === 'generation_completed') {
+      const schema = lastMessage.schema || lastMessage.data?.schema
+      if (schema) {
+        setUiSchema(schema)
+        if (lastMessage.preservedData || lastMessage.data?.preservedData) {
+          setPreservedFormData(prev => ({ ...prev, ...(lastMessage.preservedData || lastMessage.data?.preservedData) }))
+        }
+        setMode('wizard')
+      }
+    } else if (lastMessage.type === 'ui_generation_failed' || lastMessage.type === 'generation_error') {
       setMode('original')
     }
-  }, [lastMessage])
+  }, [lastMessage, setCognitiveScore])
 
-  // Update demo mode based on connection status
-  useEffect(() => {
-    setDemoMode(!isConnected)
-  }, [isConnected])
+  // 5. Backend Form Auto-Save with Debounce (solves Team Leader item 1)
+  const triggerAutoSave = useCallback((dataToSave) => {
+    setSaveStatus('saving')
+    // Local session backup
+    try {
+      sessionStorage.setItem('auragen_form_data', JSON.stringify(dataToSave))
+    } catch {}
 
-  // Trigger transformation with preserved data
-  const handleTriggerTransformation = useCallback((simulatedScore = 85) => {
+    // Backend save debounced
+    if (autoSaveDebounceRef.current) {
+      clearTimeout(autoSaveDebounceRef.current)
+    }
+    autoSaveDebounceRef.current = setTimeout(async () => {
+      if (sessionId) {
+        const saved = await saveFormData(sessionId, dataToSave)
+        setSaveStatus(saved ? 'saved_backend' : 'saved_local')
+      } else {
+        setSaveStatus('saved_local')
+      }
+    }, 600)
+  }, [sessionId])
+
+  const handleFieldChange = (field, value) => {
+    setPreservedFormData(prev => {
+      const updated = { ...prev, [field]: value }
+      triggerAutoSave(updated)
+      return updated
+    })
+  }
+
+  // 6. Trigger AI Generation (calls backend /api/sessions/:id/generate)
+  const handleTriggerTransformation = useCallback(async (simulatedScore = 88) => {
     setCognitiveScore(simulatedScore)
     setMode('loading')
+
+    // Persist current state before generation
+    if (sessionId) {
+      await saveFormData(sessionId, preservedFormData)
+      // Send high friction telemetry event
+      await sendTelemetryEvent(sessionId, {
+        eventType: 'rage_click',
+        field: 'form_submission_gate',
+        cognitiveLoadScore: simulatedScore,
+      })
+      // Trigger generation endpoint
+      triggerGenerationRequest(sessionId)
+    }
+
+    // Safety fallback timer if backend takes longer or is offline
     setTimeout(() => {
-      setUiSchema(DEMO_SCHEMA)
-      setMode('wizard')
-    }, 1600)
-  }, [])
+      setMode(currentMode => {
+        if (currentMode === 'loading') {
+          setUiSchema(DEMO_SCHEMA)
+          return 'wizard'
+        }
+        return currentMode
+      })
+    }, 1800)
+  }, [sessionId, preservedFormData, setCognitiveScore])
+
+  // 7. Real Backend Form Submission (solves Team Leader item 5)
+  const handleFinalSubmit = useCallback(async (finalData) => {
+    setIsSubmitting(true)
+    const result = await submitFormToBackend(sessionId, finalData)
+    setIsSubmitting(false)
+    setSubmissionResult(result)
+  }, [sessionId])
 
   return (
     <div className="min-h-screen bg-[#f8f9fb] text-gray-800 flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
@@ -158,7 +312,15 @@ export default function AuraGenPage() {
                       </div>
                     </div>
                     <span className="text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
-                      Member 1 Mock
+                      {sessionId ? `Session: ${sessionId.slice(0, 8)}...` : 'Connecting...'}
+                    </span>
+                  </div>
+
+                  {/* Auto-save status indicator */}
+                  <div className="flex items-center justify-between text-[11px] text-gray-400 mb-3 px-1">
+                    <span>Backend Auto-Save:</span>
+                    <span className={`font-medium ${saveStatus === 'saved_backend' ? 'text-emerald-600' : saveStatus === 'saving' ? 'text-amber-600' : 'text-gray-500'}`}>
+                      {saveStatus === 'saved_backend' ? '✓ Synced to Backend API' : saveStatus === 'saving' ? 'Saving to backend...' : 'Ready'}
                     </span>
                   </div>
 
@@ -169,7 +331,7 @@ export default function AuraGenPage() {
                         type="text"
                         className="input-field"
                         value={preservedFormData.fullName || ''}
-                        onChange={(e) => setPreservedFormData(p => ({ ...p, fullName: e.target.value }))}
+                        onChange={(e) => handleFieldChange('fullName', e.target.value)}
                         placeholder="e.g. Rahul Verma"
                       />
                     </div>
@@ -179,7 +341,7 @@ export default function AuraGenPage() {
                         type="email"
                         className="input-field"
                         value={preservedFormData.email || ''}
-                        onChange={(e) => setPreservedFormData(p => ({ ...p, email: e.target.value }))}
+                        onChange={(e) => handleFieldChange('email', e.target.value)}
                         placeholder="you@example.com"
                       />
                     </div>
@@ -190,7 +352,7 @@ export default function AuraGenPage() {
                           type="number"
                           className="input-field"
                           value={preservedFormData.annualIncome || ''}
-                          onChange={(e) => setPreservedFormData(p => ({ ...p, annualIncome: e.target.value }))}
+                          onChange={(e) => handleFieldChange('annualIncome', e.target.value)}
                           placeholder="750000"
                         />
                       </div>
@@ -200,7 +362,7 @@ export default function AuraGenPage() {
                           type="number"
                           className="input-field"
                           value={preservedFormData.loanAmount || ''}
-                          onChange={(e) => setPreservedFormData(p => ({ ...p, loanAmount: e.target.value }))}
+                          onChange={(e) => handleFieldChange('loanAmount', e.target.value)}
                           placeholder="250000"
                         />
                       </div>
@@ -237,17 +399,27 @@ export default function AuraGenPage() {
                   uiSchema={mode === 'wizard' ? uiSchema : null}
                   isLoading={mode === 'loading'}
                   preservedData={preservedFormData}
-                  onStateChange={(updatedData) => setPreservedFormData(prev => ({ ...prev, ...updatedData }))}
-                  onComplete={(data) => {
-                    console.log('Form completed:', data)
-                    alert('Application successfully submitted!\n\nPreserved & Submitted Data:\n' + JSON.stringify(data, null, 2))
+                  onStateChange={(updatedData) => {
+                    setPreservedFormData(prev => ({ ...prev, ...updatedData }))
+                    triggerAutoSave(updatedData)
                   }}
+                  onComplete={handleFinalSubmit}
                   onCancel={() => {
                     setMode('original')
                     setUiSchema(null)
                     setCognitiveScore(0)
                   }}
                 />
+
+                {/* Real Submission Result Notice */}
+                {submissionResult && (
+                  <div className="mt-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-left text-xs text-emerald-800">
+                    <p className="font-bold text-sm mb-1">✓ Application Submitted to Backend API!</p>
+                    <p>Session ID: <span className="font-mono">{submissionResult.sessionId}</span></p>
+                    <p>Submitted At: <span className="font-mono">{submissionResult.submittedAt}</span></p>
+                    <p className="mt-1 text-[11px] text-emerald-600">Saved to backend: {submissionResult.savedToBackend ? 'Yes (PATCH /api/sessions/:id/form)' : 'Local persistence fallback'}</p>
+                  </div>
+                )}
               </div>
             )}
           </AnimatePresence>
