@@ -3,11 +3,29 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { getComponent } from '../lib/ComponentRegistry'
 
 const variants = {
-  enter: (direction) => ({ x: direction > 0 ? 40 : -40, opacity: 0 }),
-  center: { x: 0, opacity: 1 },
-  exit:  (direction) => ({ x: direction > 0 ? -40 : 40, opacity: 0 }),
+  enter: (direction) => ({
+    x: direction > 0 ? 32 : -32,
+    opacity: 0,
+    filter: 'blur(2px)',
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    filter: 'blur(0px)',
+  },
+  exit: (direction) => ({
+    x: direction > 0 ? -32 : 32,
+    opacity: 0,
+    filter: 'blur(2px)',
+  }),
 }
-const transition = { duration: 0.28, ease: [0.4, 0, 0.2, 1] }
+
+const transition = {
+  type: 'spring',
+  stiffness: 340,
+  damping: 30,
+  mass: 0.85,
+}
 
 export default function FormWizard({ schema, preservedData, onComplete, onCancel, onStateChange }) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
