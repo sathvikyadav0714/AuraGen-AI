@@ -76,9 +76,3 @@ npm run dev
 # 3. Open in browser
 http://localhost:3001
 ```
-
----
-
-## 📋 20-Day Commit Schedule
-
-The full 20-day push schedule across all 4 weeks is documented in [`GITHUB_PUSH_SCHEDULE.md`](./GITHUB_PUSH_SCHEDULE.md) and [`DAILY_TERMINAL_COMMANDS.md`](./DAILY_TERMINAL_COMMANDS.md).
