@@ -1,4 +1,8 @@
-
 {
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@google/genai": "^3.6.1",
+    "dotenv": "^18.0.10",
+    "groq-sdk": "^1.6.0"
+  }
 }

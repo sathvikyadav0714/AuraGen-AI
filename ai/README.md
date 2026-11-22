@@ -1,87 +1,211 @@
-# AuraGen – AI Development Module
 
-## 1. Overview
+# AuraGen AI Module
 
-The AI module is responsible for preparing AI instructions and generating the foundation for simplified conversational user interfaces.
+## Overview
 
-It uses user interaction information, cognitive load score, friction details and existing form data to prepare a structured request for an AI model.
+The AuraGen AI module generates simplified conversational user interfaces based on user interaction difficulties and cognitive load information.
 
-## 2. Module Structure
+It uses a Large Language Model (LLM) through the Groq API to generate structured UI JSON.
 
-| File | Purpose |
-|---|---|
-| `contextExample.js` | Provides sample user and form information. |
-| `designSystem.js` | Defines the allowed UI components. |
-| `promptTemplates.js` | Contains AI instructions and user message templates. |
-| `llmService.js` | Validates form context and prepares AI requests. |
-| `responseValidator.js` | Validates the structure and data types of AI responses. |
-| `testAI.js` | Tests AI prompt preparation. |
-| `testValidator.js` | Tests AI response validation. |
+The generated response is validated before being returned to the backend.
 
-## 3. Key Features Implemented
+## Architecture
 
-- Form context preparation.
-- Cognitive load and friction information handling.
-- AI system prompt creation.
-- Dynamic user message generation.
-- Predefined UI component configuration.
-- Input validation and error handling.
-- JSON response validation.
-- Progress value validation (0–100).
-- Separate test scripts for the AI service and response validator.
+Form Context
+     |
+     v
+Input Validation
+     |
+     v
+Prompt Templates
+     |
+     v
+Groq API
+     |
+     v
+AI-generated UI JSON
+     |
+     v
+Response Validator
+     |
+     v
+Validated UI JSON
+     |
+     v
+Backend Integration
 
-## 4. Allowed UI Components
+## Technologies Used
 
-The current design system defines:
+- JavaScript (Node.js)
+- Groq API
+- Groq SDK
+- dotenv
+- JSON
 
-- TEXT_INPUT
-- NUMBER_INPUT
-- DROPDOWN
-- BUTTON
-- PROGRESS
+## Project Structure
 
-These components provide a predefined set of UI elements for the intended simplified interface.
+ai/
+|
+|-- contextExample.js
+|-- designSystem.js
+|-- llmService.js
+|-- promptTemplates.js
+|-- responseValidator.js
+|-- testGroq.js
+|-- testGroqValidation.js
+|-- testAIValidation.js
+|-- testValidator.js
+|-- testWorkflow.js
+|-- package.json
+|-- package-lock.json
+|-- .env.example
+|-- .gitignore
+|-- README.md
 
-## 5. Testing
+## Setup Instructions
 
-Run the following commands from the project root directory:
+### 1. Clone the repository
 
 ```bash
-node ai/testAI.js
-node ai/testValidator.js
+git clone https://github.com/sathvikyadav0714/AuraGen-AI.git
 ```
 
-The response validator has been tested with four scenarios:
+### 2. Navigate to the AI folder
 
-1. Valid JSON response.
-2. Missing required field.
-3. Invalid progress value.
-4. Invalid JSON syntax.
+```bash
+cd AuraGen-AI/ai
+```
 
-All four test cases passed.
+### 3. Install dependencies
 
-## 6. Current Development Status
+```bash
+npm install
+```
 
-**Implemented:**
-- Initial AI module structure.
-- Form context preparation.
-- Prompt templates.
-- AI request preparation.
-- Input validation.
-- Response validation.
-- Initial test scripts.
+### 4. Configure environment variables
 
-**Pending:**
-- Actual LLM API integration.
-- Generating real structured UI responses.
-- Stronger validation of nested UI components and fields.
-- Integration with the backend.
-- Connection with the React dynamic UI renderer.
+Create a `.env` file in the ai folder.
 
-## 7. Technology
+Add:
 
-- JavaScript
-- Node.js
-- JSON
-- AI prompt engineering
-- Large Language Models (planned integration)
+```env
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=openai/gpt-oss-120b
+```
+
+Obtain an API key from the Groq developer console.
+
+Never upload your actual `.env` file to GitHub.
+
+### 5. Run AI generation test
+
+```bash
+node testGroq.js
+```
+
+This test sends sample form context to the Groq API and checks the generated UI response.
+
+### 6. Run validation tests
+
+```bash
+node testGroqValidation.js
+```
+
+## Input Context
+
+The AI service accepts the following information:
+
+- cognitiveLoadScore: Current cognitive load score (0-100).
+- problematicField: Field where the user experiences difficulty.
+- frictionDetails: Description of interaction difficulties.
+- formData: Information already entered by the user.
+
+## AI Response Structure
+
+The AI service returns a consistent response.
+
+Successful response:
+
+```json
+{
+  "success": true,
+  "message": "UI generated and validated successfully.",
+  "data": {
+    "title": "Simplified Financial Form",
+    "steps": [
+      {
+        "question": "What is your annual income?",
+        "component": "NUMBER_INPUT"
+      }
+    ],
+    "navigation": ["Next", "Back", "Submit"],
+    "progress": 50
+  }
+}
+```
+
+Failed response:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_AI_RESPONSE",
+    "message": "Validation failed."
+  }
+}
+```
+
+## Validation
+
+The response validator checks:
+
+- Valid JSON structure.
+- Required fields.
+- Question format.
+- Allowed UI components.
+- Supported navigation actions.
+- Progress value between 0 and 100.
+
+## Error Handling
+
+The AI service handles:
+
+- Missing API key.
+- Invalid input context.
+- Empty AI responses.
+- Invalid AI-generated JSON.
+- API errors.
+- Rate limits.
+- Timeout errors.
+- Temporary API failures with retry attempts.
+
+## Testing
+
+The module includes tests for:
+
+- Actual Groq AI generation.
+- Form context validation.
+- AI response validation.
+- Invalid JSON.
+- Unsupported UI components.
+- Invalid progress values.
+- Missing required context.
+
+## Integration Status
+
+The AI generation service currently accepts sample form context and returns validated UI JSON.
+
+Backend and WebSocket integration with the other AuraGen modules remains a separate integration step.
+
+## Security
+
+- API keys are stored in `.env`.
+- `.env` is excluded from Git.
+- `.env.example` provides placeholder configuration.
+- Only approved UI component identifiers are accepted by the response validator.
+- AI-generated JavaScript is not executed.
+
+## Note
+
+This implementation currently uses Groq as the LLM provider. The provider choice should be confirmed with the project lead.
