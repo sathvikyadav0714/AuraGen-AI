@@ -1,0 +1,7 @@
+node_modules/
+.env
+auragen.db
+auragen.db-shm
+auragen.db-wal
+
+coverage/
