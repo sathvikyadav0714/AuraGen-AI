@@ -118,6 +118,7 @@ export default function useTelemetry(options = {}) {
   // Hesitation Tracking Refs
   const activeFocusFieldRef = useRef(null);
   const focusStartTimeRef = useRef(null);
+  const hasTriggeredDwellHesitationRef = useRef(false);
   const fieldHesitationsRef = useRef({});
   const hesitationEventsCountRef = useRef(0);
 
@@ -301,6 +302,7 @@ export default function useTelemetry(options = {}) {
     const fieldId = getSafeElementId(e.target);
     activeFocusFieldRef.current = fieldId;
     focusStartTimeRef.current = now;
+    hasTriggeredDwellHesitationRef.current = false;
   }, [registerUserActivity]);
 
   const handleFocusOut = useCallback((e) => {
@@ -312,7 +314,7 @@ export default function useTelemetry(options = {}) {
       const field = activeFocusFieldRef.current;
       const abandonmentDelay = now - focusStartTimeRef.current;
 
-      if (isFieldHesitant(abandonmentDelay, TELEMETRY_CONFIG.FIELD_HESITATION_THRESHOLD_MS)) {
+      if (!hasTriggeredDwellHesitationRef.current && isFieldHesitant(abandonmentDelay, TELEMETRY_CONFIG.FIELD_HESITATION_THRESHOLD_MS)) {
         hesitationEventsCountRef.current += 1;
         const currentStats = fieldHesitationsRef.current[field] || {
           totalDurationMs: 0,
@@ -344,6 +346,7 @@ export default function useTelemetry(options = {}) {
 
     activeFocusFieldRef.current = null;
     focusStartTimeRef.current = null;
+    hasTriggeredDwellHesitationRef.current = false;
   }, [onFrictionEvent, registerUserActivity]);
 
   const handleKeyDown = useCallback((e) => {
@@ -355,8 +358,9 @@ export default function useTelemetry(options = {}) {
       const field = activeFocusFieldRef.current;
       const hesitation = now - focusStartTimeRef.current;
 
-      // Record hesitation if threshold exceeded
-      if (isFieldHesitant(hesitation, TELEMETRY_CONFIG.FIELD_HESITATION_THRESHOLD_MS)) {
+      // Record hesitation if threshold exceeded and dwell hesitation hasn't already fired
+      if (!hasTriggeredDwellHesitationRef.current && isFieldHesitant(hesitation, TELEMETRY_CONFIG.FIELD_HESITATION_THRESHOLD_MS)) {
+        hasTriggeredDwellHesitationRef.current = true;
         hesitationEventsCountRef.current += 1;
         const currentStats = fieldHesitationsRef.current[field] || {
           totalDurationMs: 0,
@@ -439,6 +443,7 @@ export default function useTelemetry(options = {}) {
 
     activeFocusFieldRef.current = null;
     focusStartTimeRef.current = null;
+    hasTriggeredDwellHesitationRef.current = false;
     fieldHesitationsRef.current = {};
     hesitationEventsCountRef.current = 0;
 
@@ -483,6 +488,44 @@ export default function useTelemetry(options = {}) {
         accumulatedInactivityMsRef.current += TELEMETRY_CONFIG.SNAPSHOT_INTERVAL_MS;
       } else {
         currentInactivityMsRef.current = 0;
+      }
+
+      // Reset instantaneous velocity to 0 when mouse is at rest (> 120ms without move)
+      if (now - lastMousePosRef.current.time > 120) {
+        currentVelocityRef.current = 0;
+        accelerationRef.current = 0;
+      }
+
+      // Live hesitation trigger while dwelling in an input field without typing
+      if (activeFocusFieldRef.current && focusStartTimeRef.current) {
+        const dwellDuration = now - focusStartTimeRef.current;
+        if (dwellDuration >= TELEMETRY_CONFIG.FIELD_HESITATION_THRESHOLD_MS && !hasTriggeredDwellHesitationRef.current) {
+          hasTriggeredDwellHesitationRef.current = true;
+          hesitationEventsCountRef.current += 1;
+          const currentStats = fieldHesitationsRef.current[activeFocusFieldRef.current] || {
+            totalDurationMs: 0,
+            count: 0,
+            abandonedCount: 0,
+            lastDurationMs: 0
+          };
+          fieldHesitationsRef.current = {
+            ...fieldHesitationsRef.current,
+            [activeFocusFieldRef.current]: {
+              totalDurationMs: currentStats.totalDurationMs + dwellDuration,
+              count: currentStats.count + 1,
+              abandonedCount: currentStats.abandonedCount,
+              lastDurationMs: dwellDuration
+            }
+          };
+          if (onFrictionEvent) {
+            onFrictionEvent({
+              type: 'hesitation',
+              target: activeFocusFieldRef.current,
+              durationMs: dwellDuration,
+              timestamp: now
+            });
+          }
+        }
       }
 
       // Calculate kinematic moving averages & path efficiency

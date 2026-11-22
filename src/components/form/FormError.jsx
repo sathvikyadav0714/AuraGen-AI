@@ -10,9 +10,9 @@ export default function FormError({ error }) {
   if (!error) return null;
 
   return (
-    <p className="mt-1.5 text-xs text-rose-600 flex items-center gap-1 font-medium animate-fadeIn">
+    <p className="mt-1.5 text-xs text-rose-400 flex items-center gap-1.5 font-semibold animate-fadeIn">
       <svg
-        className="w-3.5 h-3.5 flex-shrink-0"
+        className="w-3.5 h-3.5 flex-shrink-0 text-rose-400"
         fill="currentColor"
         viewBox="0 0 20 20"
       >
