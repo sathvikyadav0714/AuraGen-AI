@@ -34,15 +34,23 @@ const TextInput = ({ label, name, value, onChange, placeholder, error }) => (
   </FieldWrap>
 );
 
-const NumberInput = ({ label, name, value, onChange, placeholder, error }) => (
+const NumberInput = ({ label, name, value, onChange, placeholder, error, prefix, min, max }) => (
   <FieldWrap>
     <Label name={name} text={label} />
-    <input
-      className={`input-field ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
-      type="number" id={name} name={name}
-      value={value ?? ''} placeholder={placeholder}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <div className="relative flex items-center">
+      {prefix && (
+        <span className="absolute left-3.5 text-xs font-semibold text-gray-400 select-none">
+          {prefix}
+        </span>
+      )}
+      <input
+        className={`input-field ${prefix ? 'pl-8' : ''} ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
+        type="number" id={name} name={name}
+        min={min} max={max}
+        value={value ?? ''} placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
     <ErrorMsg msg={error} />
   </FieldWrap>
 );
@@ -113,11 +121,11 @@ const TextArea = ({ label, name, value, onChange, placeholder, error }) => (
 const RadioGroup = ({ label, name, value, onChange, options = [], error }) => (
   <FieldWrap>
     <Label name={name} text={label} />
-    <div className="flex flex-col gap-2 mt-1">
+    <div className="flex flex-col gap-2 mt-1" role="radiogroup" aria-label={label}>
       {options.map((opt) => (
         <label
           key={opt.value}
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all duration-150
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all duration-150 focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-400
             ${value === opt.value
               ? 'border-blue-400 bg-blue-50/60 shadow-sm'
               : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'}`}
@@ -126,9 +134,9 @@ const RadioGroup = ({ label, name, value, onChange, options = [], error }) => (
             type="radio" name={name} value={opt.value}
             checked={value === opt.value}
             onChange={(e) => onChange(e.target.value)}
-            className="accent-blue-600 w-4 h-4"
+            className="accent-blue-600 w-4 h-4 cursor-pointer focus:outline-none"
           />
-          <span className={`text-sm font-medium ${value === opt.value ? 'text-blue-700' : 'text-gray-700'}`}>
+          <span className={`text-sm font-medium select-none ${value === opt.value ? 'text-blue-700' : 'text-gray-700'}`}>
             {opt.label}
           </span>
         </label>
@@ -149,22 +157,22 @@ const CheckboxGroup = ({ label, name, value = [], onChange, options = [], error 
   return (
     <FieldWrap>
       <Label name={name} text={label} />
-      <div className="flex flex-col gap-2 mt-1">
+      <div className="flex flex-col gap-2 mt-1" role="group" aria-label={label}>
         {options.map((opt) => {
           const checked = Array.isArray(value) && value.includes(opt.value);
           return (
             <label
               key={opt.value}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all duration-150
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all duration-150 focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-400
                 ${checked ? 'border-blue-400 bg-blue-50/60 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'}`}
             >
               <input
                 type="checkbox" name={name} value={opt.value}
                 checked={checked}
                 onChange={() => handleChange(opt.value)}
-                className="accent-blue-600 w-4 h-4 rounded"
+                className="accent-blue-600 w-4 h-4 rounded cursor-pointer focus:outline-none"
               />
-              <span className={`text-sm font-medium ${checked ? 'text-blue-700' : 'text-gray-700'}`}>
+              <span className={`text-sm font-medium select-none ${checked ? 'text-blue-700' : 'text-gray-700'}`}>
                 {opt.label}
               </span>
             </label>
