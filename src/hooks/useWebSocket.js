@@ -131,12 +131,18 @@ export default function useWebSocket(url = 'ws://localhost:3000') {
     return false
   }, [])
 
+  // Testing & verification helper: simulates incoming WebSocket message
+  const simulateServerMessage = useCallback((msg) => {
+    setLastMessage(msg)
+  }, [])
+
   return {
     isConnected,
     connectionState,
     lastMessage,
     error,
     sendMessage,
+    simulateServerMessage,
     reconnectCount,
     retryConnection: connect,
   }

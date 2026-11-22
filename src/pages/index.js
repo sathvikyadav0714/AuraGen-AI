@@ -59,7 +59,7 @@ export default function AuraGenPage() {
   const [cognitiveScore, setCognitiveScore] = useState(0)
   const [demoMode, setDemoMode] = useState(true)
 
-  const { isConnected, lastMessage, error, sendMessage, reconnectCount } = useWebSocket('ws://localhost:3000')
+  const { isConnected, connectionState, lastMessage, error, sendMessage, simulateServerMessage, reconnectCount } = useWebSocket('ws://localhost:3000')
 
   // Handle WebSocket messages
   useEffect(() => {
