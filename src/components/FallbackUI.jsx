@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function FallbackUI({
@@ -7,9 +7,27 @@ export default function FallbackUI({
   onRetry,
   message,
   preservedFieldCount = 0,
+  isNetworkError = false,
 }) {
   const [showDetails, setShowDetails] = useState(false)
+  const [autoRetrySecs, setAutoRetrySecs] = useState(onRetry ? 8 : 0)
   const visibleErrors = errors.slice(0, 5)
+
+  // Auto-retry countdown for transient network drop recovery
+  useEffect(() => {
+    if (!onRetry || autoRetrySecs <= 0) return
+    const timer = setInterval(() => {
+      setAutoRetrySecs((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          onRetry()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [onRetry, autoRetrySecs])
 
   return (
     <motion.div
