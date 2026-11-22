@@ -1,0 +1,12 @@
+# Environment variables and API secrets
+.env
+.env.*
+
+# Allow the example environment file
+!.env.example
+
+# Node.js dependencies
+node_modules/
+
+# Debug logs
+npm-debug.log*
