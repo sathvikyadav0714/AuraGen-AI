@@ -1,160 +1,130 @@
 
 import { validateAIResponse } from "./responseValidator.js";
 
-// Test 1: Valid response
-const validResponse = JSON.stringify({
-    title: "Simplified Financial Form",
-    steps: [
-        {
-            question: "What is your annual income?",
-            component: "NUMBER_INPUT"
-        }
-    ],
-    navigation: ["Next", "Back"],
-    progress: 50
-});
+// Helper function to create a valid response
+function createResponse(overrides = {}) {
+    return JSON.stringify({
+        steps: [
+            {
+                id: "step-1",
+                title: "Annual Income",
+                description: "Enter your annual income",
+                components: [
+                    {
+                        type: "NumberInput",
+                        id: "income",
+                        name: "annualIncome",
+                        label: "What is your annual income?",
+                        required: true
+                    }
+                ]
+            }
+        ],
+        metadata: {},
+        preservedData: {},
+        ...overrides
+    });
+}
 
-// Test 2: Missing title
-const missingTitle = JSON.stringify({
-    steps: [],
-    navigation: ["Next", "Back"],
-    progress: 50
-});
-
-// Test 3: Invalid progress
-const invalidProgress = JSON.stringify({
-    title: "Financial Form",
-    steps: [],
-    navigation: ["Next", "Back"],
-    progress: 150
-});
-
-// Test 4: Invalid JSON
-const invalidJSON = "{ title: Financial Form }";
-
-// Test 5: Missing question
-const missingQuestion = JSON.stringify({
-    title: "Financial Form",
-    steps: [
-        {
-            component: "NUMBER_INPUT"
-        }
-    ],
-    navigation: ["Next", "Back"],
-    progress: 50
-});
-
-// Test 6: Unsupported component
-const unsupportedComponent = JSON.stringify({
-    title: "Financial Form",
-    steps: [
-        {
-            question: "What is your annual income?",
-            component: "VIDEO_PLAYER"
-        }
-    ],
-    navigation: ["Next", "Back"],
-    progress: 50
-});
-
-// Test 7: Empty question
-const emptyQuestion = JSON.stringify({
-    title: "Financial Form",
-    steps: [
-        {
-            question: "   ",
-            component: "NUMBER_INPUT"
-        }
-    ],
-    navigation: ["Next", "Back"],
-    progress: 50
-});
-
-// Test 8: Invalid navigation type
-const invalidNavigation = JSON.stringify({
-    title: "Financial Form",
-    steps: [],
-    navigation: ["Next", 123],
-    progress: 50
-});
-
-// Test 9: Unexpected step property
-const unexpectedProperty = JSON.stringify({
-    title: "Financial Form",
-    steps: [
-        {
-            question: "Enter your age",
-            component: "NUMBER_INPUT",
-            javascript: "runSomething()"
-        }
-    ],
-    navigation: ["Next", "Back"],
-    progress: 50
-});
-
-// Test 10: Unsupported navigation action
-const unsupportedNavigation = JSON.stringify({
-    title: "Financial Form",
-    steps: [],
-    navigation: ["Next", "DELETE"],
-    progress: 50
-});
-
-// Define all test cases
+// Test cases
 const testCases = [
     {
         name: "Valid response",
-        response: validResponse,
+        response: createResponse(),
         expected: true
     },
     {
-        name: "Missing title",
-        response: missingTitle,
+        name: "Empty steps",
+        response: createResponse({ steps: [] }),
         expected: false
     },
     {
-        name: "Invalid progress",
-        response: invalidProgress,
+        name: "Missing step ID",
+        response: createResponse({
+            steps: [{
+                components: [{
+                    type: "NumberInput",
+                    id: "income"
+                }]
+            }]
+        }),
         expected: false
     },
     {
-        name: "Invalid JSON",
-        response: invalidJSON,
-        expected: false
-    },
-    {
-        name: "Missing question",
-        response: missingQuestion,
+        name: "Missing components",
+        response: createResponse({
+            steps: [{
+                id: "step-1"
+            }]
+        }),
         expected: false
     },
     {
         name: "Unsupported component",
-        response: unsupportedComponent,
+        response: createResponse({
+            steps: [{
+                id: "step-1",
+                components: [{
+                    type: "VideoPlayer",
+                    id: "video-1"
+                }]
+            }]
+        }),
         expected: false
     },
     {
-        name: "Empty question",
-        response: emptyQuestion,
+        name: "Missing component ID",
+        response: createResponse({
+            steps: [{
+                id: "step-1",
+                components: [{
+                    type: "NumberInput"
+                }]
+            }]
+        }),
         expected: false
     },
     {
-        name: "Invalid navigation type",
-        response: invalidNavigation,
+        name: "Invalid options",
+        response: createResponse({
+            steps: [{
+                id: "step-1",
+                components: [{
+                    type: "SelectInput",
+                    id: "income-type",
+                    options: "Before tax"
+                }]
+            }]
+        }),
         expected: false
     },
     {
-        name: "Unexpected step property",
-        response: unexpectedProperty,
+        name: "Unexpected component property",
+        response: createResponse({
+            steps: [{
+                id: "step-1",
+                components: [{
+                    type: "NumberInput",
+                    id: "income",
+                    javascript: "runSomething()"
+                }]
+            }]
+        }),
         expected: false
     },
     {
-        name: "Unsupported navigation action",
-        response: unsupportedNavigation,
+        name: "Invalid metadata",
+        response: createResponse({ metadata: [] }),
+        expected: false
+    },
+    {
+        name: "Invalid JSON",
+        response: "{ steps: invalid }",
         expected: false
     }
 ];
 
-// Execute all tests
+// Run tests
 console.log("===== AURAGEN VALIDATOR TESTS =====");
 
 let passed = 0;
@@ -162,7 +132,6 @@ let failed = 0;
 
 for (const test of testCases) {
     const result = validateAIResponse(test.response);
-
     const testPassed = result.valid === test.expected;
 
     if (testPassed) {
@@ -181,8 +150,8 @@ for (const test of testCases) {
     }
 }
 
-// Display final test summary
 console.log("\n===== FINAL TEST SUMMARY =====");
 console.log("Total tests:", testCases.length);
 console.log("Passed:", passed);
 console.log("Failed:", failed);
+
