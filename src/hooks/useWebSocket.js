@@ -18,7 +18,7 @@ const RECONNECT_DELAY_MS = 3000;
 
 export const DEFAULT_WS_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WS_URL)
   ? import.meta.env.VITE_WS_URL
-  : 'ws://localhost:5000/ws';
+  : 'ws://localhost:5000';
 
 export default function useWebSocket(url = DEFAULT_WS_URL, options = {}) {
   const { onMessage, autoConnect = true, sessionId = null } = options;

@@ -15,10 +15,42 @@ export default function App() {
   // Task 3: Session State Management
   const [sessionId, setSessionId] = useState(() => getSessionId());
   const [sessionOrigin, setSessionOrigin] = useState('cached');
-
-  // Task 4: Inbound Generative UI Schema State
   const [adaptiveUiPayload, setAdaptiveUiPayload] = useState(null);
   const [showAdaptiveBanner, setShowAdaptiveBanner] = useState(false);
+
+  // Task 4: Inbound Generative UI Schema State
+
+  // Task 4: Live Frontend WebSocket Connection
+  const {
+    isConnected: isWsConnected,
+    isConnecting: isWsConnecting,
+    lastMessage: wsLastMessage,
+    reconnectCount: wsReconnectCount,
+    sendMessage: sendWsMessage
+  } = useWebSocket(DEFAULT_WS_URL, {
+    sessionId,
+    autoConnect: true
+  });
+
+  // Handle generated UI messages received from backend
+  useEffect(() => {
+    if (!wsLastMessage) return;
+
+    if (
+      wsLastMessage.type === 'ui_generated' ||
+      wsLastMessage.type === 'UI_GENERATED'
+    ) {
+      console.log('[AuraGen] AI generated UI received:', wsLastMessage);
+
+      setAdaptiveUiPayload(wsLastMessage);
+      setShowAdaptiveBanner(true);
+    }
+
+    if (wsLastMessage.type === 'generation_failed') {
+      console.error('[AuraGen] AI generation failed:', wsLastMessage);
+    }
+  }, [wsLastMessage]);
+
 
   // Initialize or restore session on mount (Task 3)
   useEffect(() => {
@@ -37,33 +69,6 @@ export default function App() {
     setupSession();
     return () => { isMounted = false; };
   }, []);
-
-  // Task 4: Live Frontend WebSocket Connection
-  const {
-    isConnected: isWsConnected,
-    isConnecting: isWsConnecting,
-    lastMessage: wsLastMessage,
-    reconnectCount: wsReconnectCount,
-    sendMessage: sendWsMessage
-  } = useWebSocket(DEFAULT_WS_URL, {
-    sessionId,
-    autoConnect: true,
-    onMessage: (msg) => {
-      if (msg?.type === 'ui_generated' || msg?.type === 'UI_GENERATED') {
-        setAdaptiveUiPayload(msg);
-        setShowAdaptiveBanner(true);
-      }
-    }
-  });
-
-  // Watch for inbound WebSocket messages (Task 4)
-  useEffect(() => {
-    if (!wsLastMessage) return;
-    if (wsLastMessage.type === 'ui_generated' || wsLastMessage.type === 'UI_GENERATED') {
-      setAdaptiveUiPayload(wsLastMessage);
-      setShowAdaptiveBanner(true);
-    }
-  }, [wsLastMessage]);
 
   // Initialize live non-invasive telemetry hook
   const { telemetry, recordValidationError, resetTelemetry } = useTelemetry({
