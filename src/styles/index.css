@@ -54,6 +54,50 @@
 }
 
 /* Micro-animations & Ambient Motion */
+@keyframes beamHorizontalTop {
+  0% { left: -50%; opacity: 0; }
+  15% { opacity: 0.95; }
+  85% { opacity: 0.95; }
+  100% { left: 100%; opacity: 0; }
+}
+
+@keyframes beamVerticalRight {
+  0% { top: -50%; opacity: 0; }
+  15% { opacity: 0.95; }
+  85% { opacity: 0.95; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes beamHorizontalBottom {
+  0% { right: -50%; opacity: 0; }
+  15% { opacity: 0.95; }
+  85% { opacity: 0.95; }
+  100% { right: 100%; opacity: 0; }
+}
+
+@keyframes beamVerticalLeft {
+  0% { bottom: -50%; opacity: 0; }
+  15% { opacity: 0.95; }
+  85% { opacity: 0.95; }
+  100% { bottom: 100%; opacity: 0; }
+}
+
+.animate-beam-top {
+  animation: beamHorizontalTop 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-beam-right {
+  animation: beamVerticalRight 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.8s;
+}
+
+.animate-beam-bottom {
+  animation: beamHorizontalBottom 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite 1.6s;
+}
+
+.animate-beam-left {
+  animation: beamVerticalLeft 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite 2.4s;
+}
+
 @keyframes floatSlow {
   0%, 100% { transform: translateY(0px) scale(1); }
   50% { transform: translateY(-18px) scale(1.04); }
