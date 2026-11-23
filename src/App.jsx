@@ -279,27 +279,33 @@ export default function App() {
               <button
                 type="button"
                 onClick={simulateHesitationDemo}
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-[11px] flex items-center gap-1.5 transition"
+                className="px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700/90 border border-cyan-500/30 text-cyan-200 font-semibold text-[11px] flex items-center gap-1.5 transition shadow-sm hover:shadow-cyan-500/20"
               >
-                <span>⏱️</span>
+                <svg className="w-3.5 h-3.5 text-cyan-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 <span>Simulate Hesitation</span>
               </button>
 
               <button
                 type="button"
                 onClick={simulateRageClickDemo}
-                className="px-2.5 py-1 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 font-semibold text-[11px] flex items-center gap-1.5 transition"
+                className="px-2.5 py-1 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 font-semibold text-[11px] flex items-center gap-1.5 transition shadow-sm hover:shadow-rose-500/20"
               >
-                <span>⚡</span>
+                <svg className="w-3.5 h-3.5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
                 <span>Simulate Rage Click</span>
               </button>
 
               <button
                 type="button"
                 onClick={simulateValidationErrorDemo}
-                className="px-2.5 py-1 rounded-lg bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 text-amber-300 font-semibold text-[11px] flex items-center gap-1.5 transition"
+                className="px-2.5 py-1 rounded-lg bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/40 text-amber-300 font-semibold text-[11px] flex items-center gap-1.5 transition shadow-sm hover:shadow-amber-500/20"
               >
-                <span>🛑</span>
+                <svg className="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
                 <span>Simulate Error Mismatch</span>
               </button>
 
@@ -323,18 +329,22 @@ export default function App() {
                   setAdaptiveUiPayload(demoSchema);
                   setShowAdaptiveBanner(true);
                 }}
-                className="px-2.5 py-1 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-700/60 text-indigo-300 font-semibold text-[11px] flex items-center gap-1.5 transition"
+                className="px-2.5 py-1 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-500/40 text-indigo-300 font-semibold text-[11px] flex items-center gap-1.5 transition shadow-sm hover:shadow-indigo-500/20"
               >
-                <span>📡</span>
+                <svg className="w-3.5 h-3.5 text-indigo-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
                 <span>Simulate WS Adaptive Signal</span>
               </button>
 
               <button
                 type="button"
                 onClick={resetTelemetry}
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-slate-200 font-semibold text-[11px] flex items-center gap-1 transition"
+                className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-slate-200 font-semibold text-[11px] flex items-center gap-1.5 transition group"
               >
-                <span>↺</span>
+                <svg className="w-3.5 h-3.5 text-slate-400 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
                 <span>Reset Telemetry</span>
               </button>
             </div>
@@ -531,7 +541,12 @@ export default function App() {
               {/* Kinematic Metrics 4-Grid */}
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div className="p-3 bg-slate-950/25 backdrop-blur-md rounded-xl border border-white/[0.08]">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Cursor Velocity</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1.5 mb-1">
+                    <svg className="w-3 h-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Cursor Velocity
+                  </span>
                   <div className="flex items-baseline gap-1">
                     <span className="text-base font-extrabold font-mono text-indigo-400">{telemetry.cursorVelocity}</span>
                     <span className="text-[10px] text-slate-400">px/ms</span>
@@ -540,7 +555,12 @@ export default function App() {
                 </div>
 
                 <div className="p-3 bg-slate-950/25 backdrop-blur-md rounded-xl border border-white/[0.08]">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Path Trajectory</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1.5 mb-1">
+                    <svg className="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    Path Trajectory
+                  </span>
                   <div className="flex items-baseline gap-1">
                     <span className={`text-base font-extrabold font-mono ${telemetry.pathEfficiency > 60 ? 'text-emerald-400' : 'text-amber-400'}`}>
                       {telemetry.pathEfficiency}%
@@ -551,7 +571,12 @@ export default function App() {
                 </div>
 
                 <div className="p-3 bg-slate-950/25 backdrop-blur-md rounded-xl border border-white/[0.08]">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Hesitation Events</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1.5 mb-1">
+                    <svg className="w-3 h-3 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Hesitation Events
+                  </span>
                   <div className="flex items-baseline gap-1">
                     <span className="text-base font-extrabold font-mono text-amber-400">{telemetry.hesitationEventsCount}</span>
                     <span className="text-[10px] text-slate-400">delays &gt; 2s</span>
@@ -560,7 +585,12 @@ export default function App() {
                 </div>
 
                 <div className="p-3 bg-slate-950/25 backdrop-blur-md rounded-xl border border-white/[0.08]">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Rapid Clicks</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1.5 mb-1">
+                    <svg className="w-3 h-3 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                    </svg>
+                    Rapid Clicks
+                  </span>
                   <div className="flex items-baseline gap-1">
                     <span className={`text-base font-extrabold font-mono ${telemetry.rageClickCount > 0 ? 'text-rose-400' : 'text-slate-300'}`}>
                       {telemetry.rageClickCount}

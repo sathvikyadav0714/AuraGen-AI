@@ -24,6 +24,7 @@ export default function FormField({
   helperText = '',
   disabled = false,
   prefix = '',
+  icon = null,
   isValid = false,
   isFocused = false,
   focusDurationMs = 0,
@@ -59,6 +60,7 @@ export default function FormField({
           htmlFor={inputId}
           className="block text-xs font-bold text-slate-300 uppercase tracking-wider select-none flex items-center gap-1.5"
         >
+          {icon && <span className="flex-shrink-0 opacity-80 group-focus-within:opacity-100 transition-opacity">{icon}</span>}
           <span>{label}</span>
           {required && <span className="text-rose-400 font-black" aria-hidden="true">*</span>}
         </label>
