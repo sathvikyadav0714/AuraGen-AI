@@ -1,0 +1,185 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#0b1021] text-slate-100 antialiased font-sans selection:bg-indigo-500 selection:text-white;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  /* High-end FinTech interactive translucent input classes */
+  .input-base {
+    @apply w-full px-4 py-2.5 sm:py-3 min-h-[44px] bg-slate-950/40 backdrop-blur-md border border-white/[0.1] rounded-xl text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:shadow-[0_0_25px_rgba(99,102,241,0.35)] shadow-inner hover:border-white/20 transition-all duration-300;
+  }
+
+  .input-error {
+    @apply border-rose-500/90 bg-rose-950/30 text-rose-100 focus:ring-rose-500/40 focus:border-rose-400 focus:shadow-[0_0_20px_rgba(244,63,94,0.35)] animate-shake;
+  }
+
+  .input-success {
+    @apply border-emerald-500/60 bg-emerald-950/25 focus:ring-emerald-500/40 focus:border-emerald-400 focus:shadow-[0_0_20px_rgba(16,185,129,0.3)];
+  }
+
+  /* Frosted Glassmorphism translucent primitives */
+  .glass-panel {
+    @apply bg-slate-900/35 backdrop-blur-2xl border border-white/[0.08] shadow-[0_20px_50px_rgba(0,0,0,0.45)];
+  }
+
+  .glass-card {
+    @apply bg-slate-900/25 backdrop-blur-xl border border-white/[0.06];
+  }
+
+  .glass-card-hover {
+    @apply hover:border-indigo-500/40 hover:bg-slate-900/40 hover:shadow-glow-indigo transition-all duration-300;
+  }
+}
+
+/* Realistic Enterprise FinTech Background Grid (Translucent Aurora Glass Mesh) */
+.realistic-bg {
+  background-color: #0b1021;
+  background-image: 
+    radial-gradient(ellipse 120% 80% at 50% -10%, rgba(99, 102, 241, 0.38), transparent 60%),
+    radial-gradient(circle at 10% 25%, rgba(139, 92, 246, 0.35) 0%, transparent 45%),
+    radial-gradient(circle at 90% 20%, rgba(6, 182, 212, 0.30) 0%, transparent 45%),
+    radial-gradient(circle at 50% 55%, rgba(168, 85, 247, 0.25) 0%, transparent 50%),
+    radial-gradient(circle at 15% 80%, rgba(59, 130, 246, 0.30) 0%, transparent 45%),
+    radial-gradient(circle at 85% 85%, rgba(236, 72, 153, 0.25) 0%, transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+  background-attachment: fixed;
+}
+
+/* Micro-animations & Ambient Motion */
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-18px) scale(1.04); }
+}
+
+@keyframes floatReverse {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(18px) scale(0.96); }
+}
+
+.animate-float-slow {
+  animation: floatSlow 7s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: floatReverse 9s ease-in-out infinite;
+}
+
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-flow {
+  background-size: 200% 200%;
+  animation: gradientFlow 4s ease infinite;
+}
+
+@keyframes radarSweep {
+  0% { top: 0%; opacity: 0; }
+  15% { opacity: 0.7; }
+  85% { opacity: 0.7; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.animate-radar-sweep {
+  animation: radarSweep 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.shimmer-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes borderGlowPulse {
+  0%, 100% { 
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.25), inset 0 0 15px rgba(245, 158, 11, 0.08); 
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.55), inset 0 0 25px rgba(245, 158, 11, 0.18); 
+  }
+}
+
+.animate-border-glow {
+  animation: borderGlowPulse 2s infinite ease-in-out;
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.15); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.15); }
+  70% { transform: scale(1); }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 2.2s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-3px); }
+  40%, 80% { transform: translateX(3px); }
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+.animate-pulseGlow {
+  animation: pulseGlow 3s infinite ease-in-out;
+}
+
+/* Custom sleek dark scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #070b14;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
