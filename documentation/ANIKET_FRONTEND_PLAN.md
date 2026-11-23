@@ -37,7 +37,7 @@ In the AuraGen project, Member 1 is responsible for the user-facing entry point 
 - [ ] Day 10: Repeated Validation Error Tracking & State Aggregation
 
 ### Week 3: Cognitive Score & Live Dashboard (Days 11–15)
-- [ ] Day 11: `cognitiveScore.js` Formula & Weight Modeling (0–100)
+- [x] Day 11: `cognitiveScore.js` Formula & Weight Modeling (0–100)
 - [ ] Day 12: Score Classification (Low, Medium, High) & Threshold Events
 - [ ] Day 13: `TelemetryDashboard.jsx` Component & Visual Score Meter
 - [ ] Day 14: Real-time Metric Tiles & High-Friction History Log

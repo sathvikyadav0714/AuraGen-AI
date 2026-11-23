@@ -6,6 +6,7 @@ import { initSession, getSessionId } from './services/sessionManager';
 import { createSessionApi, sendTelemetryEventApi } from './services/apiClient';
 import useWebSocket, { DEFAULT_WS_URL } from './hooks/useWebSocket';
 import GlowCard from './components/ui/GlowCard';
+import { calculateCognitiveScore, classifyCognitiveLoad, getCognitiveScoreBreakdown } from './utils/cognitiveScore';
 
 export default function App() {
   const [lastValidationFriction, setLastValidationFriction] = useState(null);
@@ -126,52 +127,10 @@ export default function App() {
     }
   });
 
-  // Calculate dynamic cognitive load score (0–100)
-  const cognitiveScore = useMemo(() => {
-    let score = 10; // Baseline
-    score += telemetry.hesitationEventsCount * 12;
-    score += telemetry.rageClickCount * 25;
-    score += telemetry.validationErrorCount * 15;
-    score += telemetry.deadClickCount * 8;
-    if (telemetry.pathEfficiency < 40) score += 10;
-    if (telemetry.isCurrentlyInactive) score += 12;
-    return Math.min(100, Math.max(5, score));
-  }, [
-    telemetry.hesitationEventsCount,
-    telemetry.rageClickCount,
-    telemetry.validationErrorCount,
-    telemetry.deadClickCount,
-    telemetry.pathEfficiency,
-    telemetry.isCurrentlyInactive
-  ]);
-
-  const cognitiveLevel = useMemo(() => {
-    if (cognitiveScore >= 65) {
-      return {
-        label: 'High Friction (Generative UI Triggered)',
-        color: 'text-rose-400',
-        badgeBg: 'bg-rose-500/15 border-rose-500/30 text-rose-300',
-        barColor: 'from-amber-500 to-rose-500',
-        icon: 'alert-triangle'
-      };
-    }
-    if (cognitiveScore >= 35) {
-      return {
-        label: 'Moderate Cognitive Load',
-        color: 'text-amber-400',
-        badgeBg: 'bg-amber-500/15 border-amber-500/30 text-amber-300',
-        barColor: 'from-indigo-500 to-amber-500',
-        icon: 'clock'
-      };
-    }
-    return {
-      label: 'Optimal Focus (Normal Flow)',
-      color: 'text-emerald-400',
-      badgeBg: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300',
-      barColor: 'from-emerald-500 to-indigo-500',
-      icon: 'check'
-    };
-  }, [cognitiveScore]);
+  // Day 11: Dynamic cognitive load score, tier classification & breakdown engine
+  const cognitiveScore = useMemo(() => calculateCognitiveScore(telemetry), [telemetry]);
+  const cognitiveLevel = useMemo(() => classifyCognitiveLoad(cognitiveScore), [cognitiveScore]);
+  const cognitiveBreakdown = useMemo(() => getCognitiveScoreBreakdown(telemetry), [telemetry]);
 
   const handleValidationFriction = (field, error, allErrors = []) => {
     recordValidationError(field, error);
@@ -505,8 +464,8 @@ export default function App() {
               </div>
 
               <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                <span>Classification: {cognitiveScore < 35 ? 'Low' : cognitiveScore < 65 ? 'Medium' : 'High'}</span>
-                <span>Adaptive UI Trigger: &gt; 65</span>
+                <span>Tier: <strong className="text-slate-200">{cognitiveLevel.tier}</strong></span>
+                <span>Driver: <strong className="text-indigo-300">{cognitiveBreakdown.primaryDriver}</strong></span>
               </div>
             </GlowCard>
 
